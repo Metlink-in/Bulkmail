@@ -70,6 +70,37 @@
         </main>
     </div>
 
+    <div id="createUserModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">Create New System User</div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Full Name</label>
+                    <input type="text" id="nuName" class="input">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Email Address</label>
+                    <input type="email" id="nuEmail" class="input">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Initial Password</label>
+                    <input type="password" id="nuPass" class="input">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Role</label>
+                    <select id="nuRole" class="input">
+                        <option value="user">Standard User</option>
+                        <option value="admin">Administrator</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" style="background:var(--admin-accent)" onclick="confirmCreateUser()">Create User</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAdmin();
@@ -81,7 +112,7 @@
                 const users = await api.get('/admin/users');
                 
                 let filtered = users;
-                if(q) filtered = filtered.filter(u => u.email.includes(q) || u.name.includes(q));
+                if(q) filtered = filtered.filter(u => (u.email && u.email.toLowerCase().includes(q.toLowerCase())) || (u.name && u.name.toLowerCase().includes(q.toLowerCase())));
                 if(r) filtered = filtered.filter(u => u.role === r);
 
                 const tBody = document.getElementById('usersBody');
@@ -112,16 +143,18 @@
 
         window.impersonate = async (id) => {
             try {
-                const res = await api.post(`/admin/users/${id}/impersonate`);
-                api.setTokens(res.access_token, res.refresh_token);
-                alert("Impersonation active. You have 5 minutes view-only access. You will be redirected to dashboard.");
+                const res = await api.get(`/admin/users/${id}/impersonate`);
+                // Note: impersonate typically returns a temporary access token
+                localStorage.setItem('access_token', res.access_token);
+                alert("Impersonation active. Redirecting to dashboard.");
                 window.location.href = '/dashboard.html';
             } catch(e) { alert(e.message); }
         };
         
         window.toggleActive = async (id, current) => {
-            if(confirm(`Are you sure you want to ${current?'deactivate':'activate'} this user?`)) {
-                await api.post(`/admin/users/${id}/status`, { is_active: !current });
+            const action = current ? 'deactivate' : 'activate';
+            if(confirm(`Are you sure you want to ${action} this user?`)) {
+                await api.post(`/admin/users/${id}/${action}`);
                 loadUsers();
             }
         };
@@ -134,8 +167,21 @@
             }
         };
 
-        window.openCreateUser = async () => {
-            alert("Not implemented in basic UI, please use API directly or expand form modal.");
+        window.openCreateUser = () => { document.getElementById('createUserModal').style.display = 'flex'; };
+        window.closeModal = () => { document.getElementById('createUserModal').style.display = 'none'; };
+        
+        window.confirmCreateUser = async () => {
+            const payload = {
+                name: document.getElementById('nuName').value,
+                email: document.getElementById('nuEmail').value,
+                password: document.getElementById('nuPass').value,
+                role: document.getElementById('nuRole').value
+            };
+            try {
+                await api.post('/admin/users', payload);
+                closeModal();
+                loadUsers();
+            } catch(e) { alert(e.message); }
         };
 
         loadUsers();

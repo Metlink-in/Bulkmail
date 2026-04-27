@@ -7,6 +7,19 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .contact-list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin-top: 24px; }
+        .list-card { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .list-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--primary); }
+        .list-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .list-card-stats { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); }
+        
+        .contacts-drawer { position: fixed; right: -600px; top: 0; bottom: 0; width: 600px; background: var(--bg-primary); box-shadow: -4px 0 16px rgba(0,0,0,0.1); z-index: 1000; transition: right 0.3s ease; padding: 32px; display: flex; flex-direction: column; }
+        .contacts-drawer.open { right: 0; }
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        
+        .bulk-actions { background: var(--bg-secondary); padding: 12px 24px; border-radius: var(--radius-md); display: none; align-items: center; gap: 16px; margin-bottom: 16px; border: 1px solid var(--border); }
+    </style>
 </head>
 <body>
     <div class="dashboard-layout">
@@ -16,7 +29,7 @@
                 <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
                 <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
                 <a href="/pages/history.html" class="sidebar-nav-item">History</a>
-                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
                 <a href="/pages/contacts.html" class="sidebar-nav-item active">Contacts</a>
                 <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
                 <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
@@ -27,79 +40,246 @@
 
         <main class="main-content">
             <header class="page-header">
-                <h1 class="page-title">Contacts</h1>
+                <h1 class="page-title">Recipient Management</h1>
                 <div class="page-header-actions">
-                    <button class="btn btn-secondary" onclick="document.getElementById('csvUpload').click()">Upload CSV</button>
-                    <input type="file" id="csvUpload" style="display:none" accept=".csv">
+                    <button class="btn btn-secondary" onclick="openImportModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path></svg>
+                        Import Contacts
+                    </button>
+                    <button class="btn btn-primary" onclick="openNewListModal()">+ New List</button>
                 </div>
             </header>
 
-            <div class="card">
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Total Contacts</th>
-                                <th>Source</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="listsBody">
-                            <tr><td colspan="5" style="text-align:center">Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="lbl">Total Recipients</div><div class="val" id="totalContacts">0</div></div>
+                <div class="stat-card"><div class="lbl">Unique Lists</div><div class="val" id="totalLists">0</div></div>
+                <div class="stat-card"><div class="lbl">Validated Emails</div><div class="val" id="validatedPct">0%</div></div>
+                <div class="stat-card"><div class="lbl">Unsubscribed</div><div class="val">0</div></div>
+            </div>
+
+            <div class="contact-list-grid" id="listsGrid">
+                <!-- Skeleton Loading -->
+                <div class="card" style="height:150px; opacity:0.5; display:flex; align-items:center; justify-content:center;">Loading Lists...</div>
             </div>
         </main>
     </div>
 
+    <!-- Contacts Slide-in Drawer -->
+    <div id="contactsDrawer" class="contacts-drawer">
+        <div class="drawer-header">
+            <div>
+                <h2 id="drawerListName">List Name</h2>
+                <div id="drawerListMeta" style="font-size:12px; color:var(--text-secondary)">0 contacts • Created Jan 1</div>
+            </div>
+            <button class="btn btn-ghost" onclick="closeDrawer()">✕</button>
+        </div>
+
+        <div class="bulk-actions" id="bulkActions">
+            <span id="selectedCount">0 selected</span>
+            <button class="btn btn-sm btn-secondary">Assign to Schedule</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSelected()">Delete Selected</button>
+        </div>
+
+        <div class="table-container" style="flex:1; overflow-y:auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width:40px"><input type="checkbox" id="selectAll"></th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="contactsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="newListModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">Create New Contact List</div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">List Name</label>
+                    <input type="text" id="newListName" class="input" placeholder="e.g. Q4 Real Estate Leads">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+                <button class="btn btn-primary" onclick="createNewList()">Create List</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="importModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">Import Contacts</div>
+            <div class="modal-body">
+                <div class="tabs">
+                    <div class="tab-item active" onclick="switchImportTab('csv')">CSV Upload</div>
+                    <div class="tab-item" onclick="switchImportTab('sheets')">Google Sheets</div>
+                </div>
+                
+                <div id="importCsv">
+                    <div class="input-group">
+                        <label class="input-label">File</label>
+                        <input type="file" id="csvFile" class="input" accept=".csv">
+                    </div>
+                </div>
+                
+                <div id="importSheets" style="display:none">
+                    <div class="input-group">
+                        <label class="input-label">Sheet URL</label>
+                        <input type="text" id="sheetUrl" class="input">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Range</label>
+                        <input type="text" id="sheetRange" class="input" value="Sheet1!A:Z">
+                    </div>
+                </div>
+                
+                <div class="input-group" style="margin-top:16px;">
+                    <label class="input-label">Name this Import</label>
+                    <input type="text" id="importName" class="input" placeholder="e.g. Facebook Ads Leads">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+                <button id="confirmImportBtn" class="btn btn-primary">Start Import</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAuth();
-        
+
+        let currentListId = null;
+
+        function showToast(msg, type="success") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function closeModals() { document.querySelectorAll('.modal-backdrop').forEach(m => m.style.display = 'none'); }
+        function openNewListModal() { document.getElementById('newListModal').style.display = 'flex'; }
+        function openImportModal() { document.getElementById('importModal').style.display = 'flex'; }
+
         async function loadLists() {
             try {
                 const lists = await api.get('/contacts/lists');
-                const tBody = document.getElementById('listsBody');
-                tBody.innerHTML = '';
-                if(lists.items.length === 0) {
-                    tBody.innerHTML = '<tr><td colspan="5" style="text-align:center">No contact lists found.</td></tr>';
-                    return;
-                }
+                const grid = document.getElementById('listsGrid');
+                grid.innerHTML = '';
                 
+                let totalC = 0;
                 lists.items.forEach(l => {
-                    tBody.innerHTML += `<tr>
-                        <td>${l.name}</td>
-                        <td>${l.total_contacts}</td>
-                        <td><span class="badge badge-neutral">${l.source}</span></td>
-                        <td>${new Date(l.created_at).toLocaleDateString()}</td>
-                        <td>
-                            <button onclick="deleteList('${l.id}')" class="btn btn-sm btn-danger">Delete</button>
-                        </td>
-                    </tr>`;
+                    totalC += l.total_contacts;
+                    const card = document.createElement('div');
+                    card.className = 'card list-card';
+                    card.onclick = () => openDrawer(l);
+                    card.innerHTML = `
+                        <div class="list-card-header">
+                            <strong style="font-size:16px;">${l.name}</strong>
+                            <span class="badge badge-neutral">${l.source}</span>
+                        </div>
+                        <div class="list-card-stats">
+                            <span>${l.total_contacts} Contacts</span>
+                            <span>Created ${new Date(l.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div style="margin-top:12px; display:flex; gap:4px;">
+                            <div style="flex:1; height:4px; background:var(--success); border-radius:2px; opacity:0.3"></div>
+                            <div style="flex:1; height:4px; background:var(--danger); border-radius:2px; opacity:0.1"></div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
                 });
-            } catch (err) {
-                console.error(err);
-            }
+                
+                document.getElementById('totalContacts').textContent = totalC;
+                document.getElementById('totalLists').textContent = lists.items.length;
+            } catch (err) { showToast(err.message, "danger"); }
         }
-        
-        window.deleteList = async (id) => { if(confirm("Delete list and all contacts?")) { await api.delete(`/contacts/lists/${id}`); loadLists(); } }
-        
-        document.getElementById('csvUpload').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("list_name", "CSV Import " + new Date().toLocaleTimeString());
+
+        async function createNewList() {
+            const name = document.getElementById('newListName').value;
+            if(!name) return;
+            try {
+                await api.post('/contacts/lists', { name });
+                showToast("List created");
+                closeModals();
+                loadLists();
+            } catch(e) { showToast(e.message, "danger"); }
+        }
+
+        async function openDrawer(list) {
+            currentListId = list.id;
+            document.getElementById('drawerListName').textContent = list.name;
+            document.getElementById('drawerListMeta').textContent = `${list.total_contacts} contacts • Created ${new Date(list.created_at).toLocaleDateString()}`;
+            document.getElementById('contactsDrawer').classList.add('open');
             
             try {
-                await api.upload('/contacts/import/csv', formData);
-                alert("Import successful");
+                const res = await api.get(`/contacts/${list.id}`);
+                const tBody = document.getElementById('contactsTableBody');
+                tBody.innerHTML = '';
+                res.contacts.forEach(c => {
+                    let badgeClass = 'badge-neutral';
+                    if(c.email_status === 'valid') badgeClass = 'badge-success';
+                    if(c.email_status === 'invalid') badgeClass = 'badge-danger';
+                    tBody.innerHTML += `
+                        <tr>
+                            <td><input type="checkbox" class="contact-select" value="${c._id}"></td>
+                            <td>
+                                <div style="font-weight:500">${c.email}</div>
+                                <div style="font-size:11px; color:var(--text-muted)">${c.name || 'No Name'}</div>
+                            </td>
+                            <td><span class="badge ${badgeClass}">${c.email_status || 'unknown'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-ghost" onclick="deleteContact('${c._id}')">✕</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {}
+        }
+
+        function closeDrawer() { document.getElementById('contactsDrawer').classList.remove('open'); }
+
+        document.getElementById('confirmImportBtn').addEventListener('click', async (e) => {
+            const btn = e.target; btn.disabled = true;
+            const name = document.getElementById('importName').value || "New Import";
+            
+            try {
+                if(document.getElementById('importCsv').style.display !== 'none') {
+                    const file = document.getElementById('csvFile').files[0];
+                    if(!file) throw new Error("Select a file");
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    fd.append("list_name", name);
+                    await api.upload('/contacts/import/csv', fd);
+                } else {
+                    const url = document.getElementById('sheetUrl').value;
+                    const range = document.getElementById('sheetRange').value;
+                    await api.post('/contacts/import/sheets', { sheet_url: url, range, list_name: name });
+                }
+                showToast("Import started successfully");
+                closeModals();
                 loadLists();
-            } catch (err) { alert(err.message); }
+            } catch(err) { showToast(err.message, "danger"); }
+            finally { btn.disabled = false; }
         });
+
+        function switchImportTab(type) {
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('importCsv').style.display = type === 'csv' ? 'block' : 'none';
+            document.getElementById('importSheets').style.display = type === 'sheets' ? 'block' : 'none';
+        }
 
         loadLists();
     </script>

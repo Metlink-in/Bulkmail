@@ -31,8 +31,8 @@ async def register(
     user = await register_user(db, user_create)
     user_id = str(user.get("_id", user.get("id")))
     
-    access_token = create_access_token(data={"sub": user_id})
-    refresh_token = create_refresh_token(data={"sub": user_id})
+    access_token = create_access_token(data={"sub": user_id, "role": user.get("role", "user")})
+    refresh_token = create_refresh_token(data={"sub": user_id, "role": user.get("role", "user")})
     
     user["id"] = user_id
     
@@ -61,8 +61,8 @@ async def login(
         
     user_id = str(user.get("_id", user.get("id")))
     
-    access_token = create_access_token(data={"sub": user_id})
-    refresh_token = create_refresh_token(data={"sub": user_id})
+    access_token = create_access_token(data={"sub": user_id, "role": user.get("role", "user")})
+    refresh_token = create_refresh_token(data={"sub": user_id, "role": user.get("role", "user")})
     
     user["id"] = user_id
     
@@ -85,8 +85,9 @@ async def refresh(
             raise HTTPException(status_code=401, detail="Invalid token type")
             
         user_id = payload.get("sub")
+        role = payload.get("role", "user")
         # Generate new access token
-        access_token = create_access_token(data={"sub": user_id})
+        access_token = create_access_token(data={"sub": user_id, "role": role})
         return {"access_token": access_token}
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid refresh token")

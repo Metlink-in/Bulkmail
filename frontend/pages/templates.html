@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Templates - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin-top: 24px; }
+        .template-card { cursor: pointer; transition: transform 0.2s; position: relative; display: flex; flex-direction: column; height: 100%; }
+        .template-card:hover { transform: translateY(-4px); border-color: var(--primary); }
+        .template-preview-box { height: 150px; background: #f9f9f9; border-radius: var(--radius-md); margin-bottom: 16px; overflow: hidden; padding: 12px; font-size: 10px; color: var(--text-muted); line-height: 1.4; border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/templates.html" class="sidebar-nav-item active">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Email Templates</h1>
+                <div class="page-header-actions">
+                    <a href="/pages/template-preview.html" class="btn btn-primary">+ Create Template</a>
+                </div>
+            </header>
+
+            <div class="template-grid" id="templateGrid">
+                <!-- Loaded via JS -->
+                <div style="padding:40px; text-align:center; color:var(--text-secondary); grid-column: 1 / -1;">Loading templates...</div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+
+        async function loadTemplates() {
+            try {
+                const templates = await api.get('/template');
+                const grid = document.getElementById('templateGrid');
+                grid.innerHTML = '';
+                
+                if(templates.length === 0) {
+                    grid.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-secondary); grid-column: 1 / -1;">No templates found. Start by creating one!</div>';
+                    return;
+                }
+                
+                templates.forEach(t => {
+                    const card = document.createElement('div');
+                    card.className = 'card template-card';
+                    card.innerHTML = `
+                        <div class="template-preview-box">
+                            <strong>${t.subject}</strong><br><br>
+                            ${t.preview_text}...
+                        </div>
+                        <h3 style="font-size:16px; margin-bottom:4px;">${t.name}</h3>
+                        <p style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; flex:1;">Last modified: ${new Date().toLocaleDateString()}</p>
+                        <div style="display:flex; gap:8px;">
+                            <a href="/pages/template-preview.html?id=${t.id}" class="btn btn-sm btn-secondary" style="flex:1">Edit</a>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTemplate(event, '${t.id}')">✕</button>
+                        </div>
+                    `;
+                    card.onclick = () => window.location.href = `/pages/template-preview.html?id=${t.id}`;
+                    grid.appendChild(card);
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        async function deleteTemplate(e, id) {
+            e.stopPropagation();
+            if(confirm("Delete this template?")) {
+                await api.delete(`/template/${id}`);
+                loadTemplates();
+            }
+        }
+
+        loadTemplates();
+    </script>
+</body>
+</html>

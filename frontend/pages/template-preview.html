@@ -3,10 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Templates - BulkReach Pro</title>
+    <title>Template Editor - BulkReach Pro</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .split-view { display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: calc(100vh - 160px); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+        .editor-pane { background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .preview-pane { background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 32px; overflow-y: auto; }
+        .preview-frame-container { background: #fff; width: 100%; max-width: 600px; box-shadow: var(--shadow-md); border-radius: 4px; min-height: 800px; transition: width 0.3s; }
+        .preview-frame-container.mobile { max-width: 375px; }
+        .raw-editor { flex: 1; font-family: monospace; padding: 20px; border: none; resize: none; outline: none; background: #1e1e1e; color: #d4d4d4; }
+        .pane-header { padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--bg-primary); display: flex; justify-content: space-between; align-items: center; }
+    </style>
 </head>
 <body>
     <div class="dashboard-layout">
@@ -16,7 +25,7 @@
                 <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
                 <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
                 <a href="/pages/history.html" class="sidebar-nav-item">History</a>
-                <a href="/pages/template-preview.html" class="sidebar-nav-item active">Templates</a>
+                <a href="/pages/templates.html" class="sidebar-nav-item active">Templates</a>
                 <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
                 <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
                 <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
@@ -27,59 +36,153 @@
 
         <main class="main-content">
             <header class="page-header">
-                <h1 class="page-title">Templates</h1>
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <a href="/pages/templates.html" class="btn btn-ghost btn-sm">← Back</a>
+                    <h1 class="page-title" id="templateName">New Template</h1>
+                </div>
                 <div class="page-header-actions">
-                    <button class="btn btn-primary" onclick="openTemplateModal()">New Template</button>
+                    <button class="btn btn-secondary" onclick="openTestModal()">Send Test</button>
+                    <button class="btn btn-primary" onclick="saveTemplate()">Save Template</button>
                 </div>
             </header>
 
-            <div class="grid-3" id="templateGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:24px;">
-                <!-- Loaded dynamically -->
+            <div class="split-view">
+                <div class="editor-pane">
+                    <div class="pane-header">
+                        <input type="text" id="tSubject" class="input" placeholder="Email Subject" style="border:none; background:transparent; font-weight:600;">
+                    </div>
+                    <textarea id="tBody" class="raw-editor" placeholder="Write your HTML here..."></textarea>
+                    
+                    <div style="padding:16px; background:var(--bg-primary); border-top:1px solid var(--border);">
+                        <label class="input-label">Variable Preview Data</label>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                            <input type="text" id="var_first_name" class="input" value="Alex" placeholder="First Name">
+                            <input type="text" id="var_company" class="input" value="Stark Ind." placeholder="Company">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preview-pane">
+                    <div style="display:flex; gap:12px; margin-bottom:16px;">
+                        <button class="btn btn-sm btn-secondary active" onclick="setPreviewSize('desktop')">Desktop</button>
+                        <button class="btn btn-sm btn-secondary" onclick="setPreviewSize('mobile')">Mobile</button>
+                    </div>
+                    <div id="previewContainer" class="preview-frame-container">
+                        <iframe id="previewIframe" style="width:100%; height:100%; border:none;"></iframe>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
 
+    <!-- Test Modal -->
+    <div id="testModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">Send Test Email</div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Recipient Email</label>
+                    <input type="email" id="testEmail" class="input" placeholder="your@email.com">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="sendTest()">Send Test</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAuth();
-        
-        async function loadTemplates() {
-            try {
-                const grid = document.getElementById('templateGrid');
-                grid.innerHTML = 'Loading...';
-                const templates = await api.get('/template');
-                grid.innerHTML = '';
-                
-                if(templates.length === 0) {
-                    grid.innerHTML = 'No templates found.';
-                    return;
-                }
-                
-                templates.forEach(t => {
-                    grid.innerHTML += `<div class="card">
-                        <h3 style="margin-bottom:8px;">${t.name}</h3>
-                        <p style="font-size:14px; color:var(--text-secondary); margin-bottom:8px;">${t.subject}</p>
-                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">${t.preview_text.substring(0,80)}...</p>
-                        <button class="btn btn-sm btn-danger" onclick="deleteTemplate('${t.id}')">Delete</button>
-                        <button class="btn btn-sm btn-secondary" onclick="duplicateTemplate('${t.id}')">Duplicate</button>
-                    </div>`;
-                });
-            } catch (err) { console.error(err); }
-        }
-        
-        window.deleteTemplate = async (id) => { if(confirm("Delete?")) { await api.delete(`/template/${id}`); loadTemplates(); } }
-        window.duplicateTemplate = async (id) => { await api.post(`/template/${id}/duplicate`); loadTemplates(); }
-        
-        window.openTemplateModal = async () => {
-            const name = prompt("Template Name:");
-            const sub = prompt("Subject:");
-            if(name && sub) {
-                await api.post('/template', { name, subject: sub, html_body: "<p>Hello {first_name}</p>" });
-                loadTemplates();
-            }
-        };
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentId = urlParams.get('id');
 
-        loadTemplates();
+        function showToast(msg, type="success") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function closeModal() { document.getElementById('testModal').style.display = 'none'; }
+        function openTestModal() { document.getElementById('testModal').style.display = 'flex'; }
+
+        async function loadTemplate() {
+            if(!currentId) return;
+            try {
+                const t = await api.get(`/template/${currentId}`);
+                document.getElementById('templateName').textContent = t.name;
+                document.getElementById('tSubject').value = t.subject;
+                document.getElementById('tBody').value = t.html_body;
+                updatePreview();
+            } catch (err) { showToast(err.message, "danger"); }
+        }
+
+        function updatePreview() {
+            const iframe = document.getElementById('previewIframe');
+            let html = document.getElementById('tBody').value || "No content.";
+            
+            // Replace vars
+            const vars = {
+                '{first_name}': document.getElementById('var_first_name').value || 'Alex',
+                '{company}': document.getElementById('var_company').value || 'Stark Ind.'
+            };
+            for(let k in vars) html = html.replace(new RegExp(k, 'g'), vars[k]);
+            
+            iframe.srcdoc = `
+                <html>
+                    <head><style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; color: #333; }</style></head>
+                    <body>${html}</body>
+                </html>
+            `;
+        }
+
+        async function saveTemplate() {
+            const payload = {
+                name: document.getElementById('templateName').textContent,
+                subject: document.getElementById('tSubject').value,
+                html_body: document.getElementById('tBody').value
+            };
+            
+            try {
+                if(currentId) {
+                    await api.put(`/template/${currentId}`, payload);
+                } else {
+                    const name = prompt("Enter Template Name:");
+                    if(!name) return;
+                    payload.name = name;
+                    const res = await api.post('/template', payload);
+                    window.location.search = `?id=${res.id}`;
+                }
+                showToast("Template saved!");
+            } catch(e) { showToast(e.message, "danger"); }
+        }
+
+        async function sendTest() {
+            const email = document.getElementById('testEmail').value;
+            if(!email) return;
+            try {
+                await api.post('/mail/test', { to_email: email, template_id: currentId });
+                showToast("Test email sent!");
+                closeModal();
+            } catch(e) { showToast(e.message, "danger"); }
+        }
+
+        function setPreviewSize(type) {
+            const container = document.getElementById('previewContainer');
+            container.className = 'preview-frame-container ' + (type === 'mobile' ? 'mobile' : '');
+            document.querySelectorAll('.preview-pane .btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === type));
+        }
+
+        document.getElementById('tBody').addEventListener('input', updatePreview);
+        document.querySelectorAll('.editor-pane input').forEach(i => i.addEventListener('input', updatePreview));
+
+        loadTemplate();
     </script>
 </body>
 </html>

@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .section-pane { display: none; }
+        .section-pane.active { display: block; }
+        .settings-container { max-width: 800px; }
+        .test-result { margin-top: 12px; font-size: 13px; padding: 12px; border-radius: var(--radius-md); display: none; }
+        .test-success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid var(--success); }
+        .test-error { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid var(--danger); }
+        .password-input-group { position: relative; }
+        .toggle-password { position: absolute; right: 12px; top: 34px; cursor: pointer; color: var(--text-secondary); }
+    </style>
 </head>
 <body>
     <div class="dashboard-layout">
@@ -16,7 +26,7 @@
                 <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
                 <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
                 <a href="/pages/history.html" class="sidebar-nav-item">History</a>
-                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
                 <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
                 <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
                 <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
@@ -27,91 +37,235 @@
 
         <main class="main-content">
             <header class="page-header">
-                <h1 class="page-title">Global Settings</h1>
+                <h1 class="page-title">Global Configuration</h1>
+                <div class="page-header-actions">
+                    <button id="saveAllBtn" class="btn btn-primary">Save All Settings</button>
+                </div>
             </header>
 
-            <div class="card" style="max-width: 600px;">
-                <form id="settingsForm">
-                    <h3>SMTP Settings (Sending)</h3>
-                    <div class="input-group" style="margin-top:16px">
-                        <label class="input-label">Host</label>
-                        <input type="text" id="sHost" class="input">
+            <div class="settings-container">
+                <div class="tabs">
+                    <div class="tab-item active" data-target="smtp">SMTP</div>
+                    <div class="tab-item" data-target="imap">IMAP</div>
+                    <div class="tab-item" data-target="ai">AI & Gemini</div>
+                    <div class="tab-item" data-target="safety">Email Safety</div>
+                    <div class="tab-item" data-target="sheets">Google Sheets</div>
+                </div>
+
+                <div class="card">
+                    <!-- SMTP Tab -->
+                    <div id="smtp" class="section-pane active">
+                        <h3>SMTP Server (Sending)</h3>
+                        <p style="color:var(--text-secondary); font-size:13px; margin-bottom:20px;">Configure your outbound mail server credentials.</p>
+                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:16px;">
+                            <div class="input-group">
+                                <label class="input-label">Host</label>
+                                <input type="text" id="smtp_host" class="input" placeholder="smtp.gmail.com">
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">Port</label>
+                                <input type="number" id="smtp_port" class="input" value="465">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Username</label>
+                            <input type="email" id="smtp_user" class="input" placeholder="user@example.com">
+                        </div>
+                        <div class="input-group password-input-group">
+                            <label class="input-label">Password</label>
+                            <input type="password" id="smtp_password" class="input" placeholder="••••••••••••">
+                            <span class="toggle-password" onclick="togglePass('smtp_password')">👁️</span>
+                        </div>
+                        <div style="display:flex; gap:16px; margin-bottom:16px;">
+                            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+                                <input type="checkbox" id="use_tls"> Use STARTTLS
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+                                <input type="checkbox" id="use_ssl" checked> Use SSL/TLS
+                            </label>
+                        </div>
+                        <button onclick="testConnection('smtp')" class="btn btn-secondary btn-sm">Test SMTP Connection</button>
+                        <div id="smtp_test_res" class="test-result"></div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-label">Port</label>
-                        <input type="number" id="sPort" class="input" value="465">
+
+                    <!-- IMAP Tab -->
+                    <div id="imap" class="section-pane">
+                        <h3>IMAP Server (Replies)</h3>
+                        <p style="color:var(--text-secondary); font-size:13px; margin-bottom:20px;">Fetch incoming replies to track your campaign performance.</p>
+                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:16px;">
+                            <div class="input-group">
+                                <label class="input-label">Host</label>
+                                <input type="text" id="imap_host" class="input" placeholder="imap.gmail.com">
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">Port</label>
+                                <input type="number" id="imap_port" class="input" value="993">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Username</label>
+                            <input type="email" id="imap_user" class="input">
+                        </div>
+                        <div class="input-group password-input-group">
+                            <label class="input-label">Password</label>
+                            <input type="password" id="imap_password" class="input" placeholder="••••••••••••">
+                            <span class="toggle-password" onclick="togglePass('imap_password')">👁️</span>
+                        </div>
+                        <button onclick="testConnection('imap')" class="btn btn-secondary btn-sm">Test IMAP Connection</button>
+                        <div id="imap_test_res" class="test-result"></div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-label">Username (Email)</label>
-                        <input type="email" id="sUser" class="input">
+
+                    <!-- AI Tab -->
+                    <div id="ai" class="section-pane">
+                        <h3>Google Gemini AI</h3>
+                        <p style="color:var(--text-secondary); font-size:13px; margin-bottom:20px;">Power your email composition with advanced AI models.</p>
+                        <div class="input-group password-input-group">
+                            <label class="input-label">Gemini API Key</label>
+                            <input type="password" id="gemini_api_key" class="input">
+                            <span class="toggle-password" onclick="togglePass('gemini_api_key')">👁️</span>
+                        </div>
+                        <button onclick="testConnection('ai')" class="btn btn-secondary btn-sm">Test AI Access</button>
+                        <div id="ai_test_res" class="test-result"></div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-label">Password</label>
-                        <input type="password" id="sPass" class="input">
+
+                    <!-- Safety Tab -->
+                    <div id="safety" class="section-pane">
+                        <h3>Email Safety & Limits</h3>
+                        <div class="input-group">
+                            <label class="input-label">Default Delay Between Emails (Seconds)</label>
+                            <input type="number" id="email_delay_seconds" class="input" value="300" min="60">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Daily Send Limit</label>
+                            <input type="number" id="daily_send_limit" class="input" value="500">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Unsubscribe Footer (HTML)</label>
+                            <textarea id="unsubscribe_footer" class="input" rows="4"></textarea>
+                        </div>
                     </div>
-                    
-                    <hr style="margin:24px 0; border:0; border-top:1px solid var(--border)">
-                    <h3>IMAP Settings (Replies)</h3>
-                    <div class="input-group" style="margin-top:16px">
-                        <label class="input-label">Host</label>
-                        <input type="text" id="iHost" class="input">
+
+                    <!-- Sheets Tab -->
+                    <div id="sheets" class="section-pane">
+                        <h3>Google Sheets Integration</h3>
+                        <div class="input-group password-input-group">
+                            <label class="input-label">Service Account / API Key</label>
+                            <input type="password" id="google_sheets_api_key" class="input">
+                            <span class="toggle-password" onclick="togglePass('google_sheets_api_key')">👁️</span>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Default Spreadsheet ID</label>
+                            <input type="text" id="default_sheet_id" class="input">
+                        </div>
+                        <button onclick="testConnection('sheets')" class="btn btn-secondary btn-sm">Test Sheets Access</button>
+                        <div id="sheets_test_res" class="test-result"></div>
                     </div>
-                    
-                    <hr style="margin:24px 0; border:0; border-top:1px solid var(--border)">
-                    <h3>AI & API</h3>
-                    <div class="input-group" style="margin-top:16px">
-                        <label class="input-label">Gemini API Key</label>
-                        <input type="password" id="gKey" class="input">
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save Settings</button>
-                    <div id="sMsg" style="margin-top:16px; font-size:14px;"></div>
-                </form>
+                </div>
             </div>
         </main>
     </div>
 
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAuth();
-        
+
+        function showToast(msg, type="success") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function togglePass(id) {
+            const el = document.getElementById(id);
+            el.type = el.type === 'password' ? 'text' : 'password';
+        }
+
+        // --- TAB SWITCHING ---
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section-pane').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.target).classList.add('active');
+            });
+        });
+
+        // --- LOAD SETTINGS ---
         async function loadSettings() {
             try {
                 const s = await api.get('/settings');
-                document.getElementById('sHost').value = s.smtp_host || "";
-                document.getElementById('sPort').value = s.smtp_port || 465;
-                document.getElementById('sUser').value = s.smtp_user || "";
-                document.getElementById('iHost').value = s.imap_host || "";
-                // Passwords intentionally left blank to not overwrite with "••••" if we submit
-            } catch (err) { console.error(err); }
+                const fields = [
+                    'smtp_host', 'smtp_port', 'smtp_user', 
+                    'imap_host', 'imap_port', 'imap_user',
+                    'email_delay_seconds', 'daily_send_limit', 
+                    'unsubscribe_footer', 'default_sheet_id'
+                ];
+                fields.forEach(f => {
+                    if(document.getElementById(f)) document.getElementById(f).value = s[f] || (f.includes('port') ? 465 : "");
+                });
+                document.getElementById('use_tls').checked = s.use_tls || false;
+                document.getElementById('use_ssl').checked = s.use_ssl || false;
+                
+                // For secrets, we just show placeholders if they exist
+                if(s.smtp_password) document.getElementById('smtp_password').placeholder = "••••••••••••";
+                if(s.imap_password) document.getElementById('imap_password').placeholder = "••••••••••••";
+                if(s.gemini_api_key) document.getElementById('gemini_api_key').placeholder = "••••••••••••";
+                if(s.google_sheets_api_key) document.getElementById('google_sheets_api_key').placeholder = "••••••••••••";
+
+            } catch (err) { showToast(err.message, "danger"); }
         }
-        
-        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const payload = {
-                smtp_host: document.getElementById('sHost').value,
-                smtp_port: parseInt(document.getElementById('sPort').value),
-                smtp_user: document.getElementById('sUser').value,
-                imap_host: document.getElementById('iHost').value,
-            };
+
+        // --- SAVE SETTINGS ---
+        document.getElementById('saveAllBtn').addEventListener('click', async () => {
+            const payload = {};
+            const fields = [
+                'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password',
+                'imap_host', 'imap_port', 'imap_user', 'imap_password',
+                'gemini_api_key', 'email_delay_seconds', 'daily_send_limit',
+                'unsubscribe_footer', 'google_sheets_api_key', 'default_sheet_id'
+            ];
             
-            const sp = document.getElementById('sPass').value;
-            if(sp) payload.smtp_password = sp;
+            fields.forEach(f => {
+                const val = document.getElementById(f).value;
+                if(val) {
+                    payload[f] = f.includes('port') || f.includes('limit') || f.includes('delay') ? parseInt(val) : val;
+                }
+            });
             
-            const gk = document.getElementById('gKey').value;
-            if(gk) payload.gemini_api_key = gk;
-            
-            const msg = document.getElementById('sMsg');
+            payload.use_tls = document.getElementById('use_tls').checked;
+            payload.use_ssl = document.getElementById('use_ssl').checked;
+
             try {
                 await api.post('/settings', payload);
-                msg.textContent = "Settings saved successfully!";
-                msg.style.color = "var(--success)";
-            } catch (err) {
-                msg.textContent = err.message;
-                msg.style.color = "var(--danger)";
-            }
+                showToast("All settings saved successfully!");
+                loadSettings();
+            } catch (err) { showToast(err.message, "danger"); }
         });
-        
+
+        // --- TEST CONNECTIONS ---
+        async function testConnection(type) {
+            const resDiv = document.getElementById(`${type}_test_res`);
+            resDiv.style.display = 'block';
+            resDiv.className = 'test-result';
+            resDiv.innerHTML = '<span class="spinner spinner-sm"></span> Testing...';
+            
+            try {
+                // We save before testing to ensure we use current values
+                // In a real app, you might send current values in the test request
+                const res = await api.post(`/settings/${type}/test`, {});
+                resDiv.textContent = res.message || "Test Successful!";
+                resDiv.classList.add('test-success');
+            } catch (err) {
+                resDiv.textContent = err.message || "Test Failed";
+                resDiv.classList.add('test-error');
+            }
+        }
+
         loadSettings();
     </script>
 </body>

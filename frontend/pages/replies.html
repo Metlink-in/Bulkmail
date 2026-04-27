@@ -3,10 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Replies - BulkReach Pro</title>
+    <title>Inbox - BulkReach Pro</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .inbox-layout { display: flex; gap: 24px; }
+        .inbox-list { flex: 1; }
+        .inbox-detail { position: fixed; right: -500px; top: 0; bottom: 0; width: 500px; background: var(--bg-primary); box-shadow: -4px 0 16px rgba(0,0,0,0.1); z-index: 1000; transition: right 0.3s ease; padding: 32px; display: flex; flex-direction: column; }
+        .inbox-detail.open { right: 0; }
+        .reply-item { cursor: pointer; transition: background 0.2s; }
+        .reply-item:hover { background: var(--bg-secondary); }
+        .reply-item.unread { font-weight: 700; background: var(--primary-light); }
+        .read-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); display: inline-block; margin-right: 8px; }
+    </style>
 </head>
 <body>
     <div class="dashboard-layout">
@@ -16,10 +26,10 @@
                 <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
                 <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
                 <a href="/pages/history.html" class="sidebar-nav-item">History</a>
-                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
                 <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
                 <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
-                <a href="/pages/replies.html" class="sidebar-nav-item active">Replies</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item active">Replies <span id="unreadBadge" class="badge badge-info" style="margin-left:auto">0</span></a>
                 <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
                 <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
             </nav>
@@ -27,26 +37,39 @@
 
         <main class="main-content">
             <header class="page-header">
-                <h1 class="page-title">Inbox Replies</h1>
+                <h1 class="page-title">Reply Inbox</h1>
                 <div class="page-header-actions">
-                    <button class="btn btn-secondary" onclick="syncIMAP()">Sync Now</button>
-                    <button class="btn btn-ghost" onclick="markAllRead()">Mark all Read</button>
+                    <button id="syncBtn" class="btn btn-secondary" onclick="syncNow()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        Sync Now
+                    </button>
+                    <button class="btn btn-ghost" onclick="markAllRead()">Mark all read</button>
                 </div>
             </header>
 
-            <div class="card">
+            <div class="filter-bar card" style="display:flex; gap:16px; margin-bottom:24px;">
+                <input type="text" id="search" class="input" placeholder="Search replies..." style="flex:1">
+                <select id="statusFilter" class="input" style="width:150px">
+                    <option value="">All Messages</option>
+                    <option value="unread">Unread</option>
+                    <option value="read">Read</option>
+                </select>
+            </div>
+
+            <div class="card inbox-list">
                 <div class="table-container">
                     <table class="table">
                         <thead>
                             <tr>
+                                <th style="width:30px"></th>
                                 <th>From</th>
                                 <th>Subject</th>
                                 <th>Date</th>
-                                <th>Actions</th>
+                                <th>Campaign</th>
                             </tr>
                         </thead>
                         <tbody id="repliesBody">
-                            <tr><td colspan="4" style="text-align:center">Loading...</td></tr>
+                            <tr><td colspan="5" style="text-align:center">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -54,43 +77,134 @@
         </main>
     </div>
 
+    <!-- Reply Detail Drawer -->
+    <div id="replyDrawer" class="inbox-detail">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <button class="btn btn-ghost" onclick="closeDrawer()">✕ Close</button>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-sm btn-secondary" id="markUnreadBtn">Mark Unread</button>
+                <button class="btn btn-sm btn-danger" id="deleteBtn">Delete</button>
+            </div>
+        </div>
+        
+        <div id="drawerContent">
+            <h2 id="rSubject" style="margin-bottom:8px;">Subject</h2>
+            <div style="display:flex; justify-content:space-between; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border)">
+                <div>
+                    <strong id="rFrom">sender@example.com</strong>
+                    <div style="font-size:12px; color:var(--text-secondary)" id="rDate">Jan 1, 2024</div>
+                </div>
+                <div class="badge badge-info" id="rCampaign">Campaign Name</div>
+            </div>
+            
+            <div id="rBody" style="font-size:14px; line-height:1.6; white-space:pre-wrap; background:var(--bg-secondary); padding:20px; border-radius:var(--radius-md); flex:1; overflow-y:auto;">
+                Email content goes here...
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAuth();
-        
+
+        let currentReplyId = null;
+
+        function showToast(msg, type="success") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         async function loadReplies() {
             try {
-                const replies = await api.get('/replies');
+                const status = document.getElementById('statusFilter').value;
+                const search = document.getElementById('search').value;
+                let query = '?limit=50';
+                if(status === 'unread') query += '&is_read=false';
+                if(status === 'read') query += '&is_read=true';
+                if(search) query += `&search=${search}`;
+
+                const replies = await api.get(`/replies${query}`);
                 const tBody = document.getElementById('repliesBody');
                 tBody.innerHTML = '';
-                if(replies.length === 0) {
-                    tBody.innerHTML = '<tr><td colspan="4" style="text-align:center">No replies found.</td></tr>';
-                    return;
-                }
                 
-                replies.forEach(r => {
-                    const rowStl = r.is_read ? "" : "font-weight:bold; background:var(--bg-secondary)";
-                    tBody.innerHTML += `<tr style="${rowStl}">
-                        <td>${r.from_email}</td>
-                        <td>${r.subject}</td>
-                        <td>${new Date(r.received_at).toLocaleString()}</td>
-                        <td>
-                            ${!r.is_read ? `<button onclick="markRead('${r._id}')" class="btn btn-sm btn-secondary">Read</button>` : ''}
-                            <button onclick="delReply('${r._id}')" class="btn btn-sm btn-danger">Del</button>
-                        </td>
-                    </tr>`;
-                });
+                if(replies.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="5" style="text-align:center">No replies found.</td></tr>';
+                } else {
+                    replies.forEach(r => {
+                        const row = document.createElement('tr');
+                        row.className = 'reply-item' + (r.is_read ? '' : ' unread');
+                        row.onclick = () => openReply(r);
+                        row.innerHTML = `
+                            <td>${r.is_read ? '' : '<span class="read-dot"></span>'}</td>
+                            <td>${r.from_email}</td>
+                            <td>${r.subject}</td>
+                            <td>${new Date(r.received_at).toLocaleDateString()}</td>
+                            <td><span class="badge badge-neutral">${r.job_id ? 'Campaign' : 'Direct'}</span></td>
+                        `;
+                        tBody.appendChild(row);
+                    });
+                }
+
+                const unread = await api.get('/replies/unread-count');
+                document.getElementById('unreadBadge').textContent = unread.count;
+                document.getElementById('unreadBadge').style.display = unread.count > 0 ? 'inline-flex' : 'none';
+
             } catch (err) { console.error(err); }
         }
-        
-        window.markRead = async (id) => { await api.put(`/replies/${id}/read`); loadReplies(); }
-        window.delReply = async (id) => { await api.delete(`/replies/${id}`); loadReplies(); }
-        window.markAllRead = async () => { await api.post('/replies/read-all'); loadReplies(); }
-        window.syncIMAP = async () => { 
-            await api.post('/replies/sync'); 
-            alert("Background sync started. Check back in a minute."); 
+
+        async function openReply(reply) {
+            currentReplyId = reply._id;
+            document.getElementById('rSubject').textContent = reply.subject;
+            document.getElementById('rFrom').textContent = reply.from_email;
+            document.getElementById('rDate').textContent = new Date(reply.received_at).toLocaleString();
+            document.getElementById('rBody').textContent = reply.body || "No content.";
+            document.getElementById('rCampaign').textContent = reply.job_id ? "Campaign Reply" : "General";
+            
+            document.getElementById('replyDrawer').classList.add('open');
+            
+            if(!reply.is_read) {
+                await api.put(`/replies/${reply._id}/read`);
+                loadReplies();
+            }
         }
-        
+
+        function closeDrawer() { document.getElementById('replyDrawer').classList.remove('open'); }
+
+        async function syncNow() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner spinner-sm"></span> Syncing...';
+            try {
+                await api.post('/replies/sync');
+                showToast("IMAP Sync triggered in background");
+                setTimeout(loadReplies, 5000);
+            } catch(e) { showToast(e.message, "danger"); }
+            finally { btn.disabled = false; btn.innerHTML = 'Sync Now'; }
+        }
+
+        async function markAllRead() {
+            await api.post('/replies/read-all');
+            showToast("All marked as read");
+            loadReplies();
+        }
+
+        document.getElementById('statusFilter').addEventListener('change', loadReplies);
+        document.getElementById('search').addEventListener('input', debounce(loadReplies, 500));
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
         loadReplies();
     </script>
 </body>

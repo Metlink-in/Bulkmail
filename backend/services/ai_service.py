@@ -51,13 +51,21 @@ async def compose_email(
     - Value proposition: {value_prop}
 
     Requirements:
-    - Subject: under 60 chars, no spam trigger words, curiosity-driven
+    - Subject: under 60 chars, curiosity-driven, high open rate
     - Body: 3-4 short paragraphs, under 200 words total
     - Opening: personalized with {{first_name}} placeholder
     - One clear CTA in last paragraph
     - Professional signature with {sender_name} and {sender_company}
-    - NO ALL CAPS, max 1 exclamation mark in entire email
     - NO spam words: free, winner, urgent, guaranteed, limited time, act now
+
+    DESIGN REQUIREMENTS for html_body:
+    - Use a clean, modern B2B look.
+    - Container: Max-width 600px, centered, padding 40px.
+    - Typography: Use system fonts (sans-serif), line-height 1.6, font-size 16px.
+    - Subtle borders or soft shadows for a "card" feel if appropriate.
+    - Use a professional accent color for links and CTA buttons (e.g., a nice blue #2563eb).
+    - Signature should be subtly styled with slightly smaller, muted text.
+    - Ensure it looks GREAT on both mobile and desktop.
 
     Return ONLY valid JSON (no markdown, no backticks, just raw JSON):
     {{
@@ -100,13 +108,13 @@ async def improve_email(
     Current Body: {current_html_body}
     
     Requirements:
-    - Subject: under 60 chars, no spam trigger words, curiosity-driven
+    - Subject: under 60 chars
     - Body: under 200 words total
-    - Opening: keep personalization placeholders like {{first_name}} if present
-    - NO ALL CAPS, max 1 exclamation mark in entire email
-    - NO spam words
+    - Opening: keep personalization placeholders like {{first_name}}
+    - Maintain or enhance the "Attractive & Professional" B2B styling.
+    - Standardize font-size to 16px and line-height to 1.6 for readability.
     
-    Return ONLY valid JSON (no markdown, no backticks, just raw JSON):
+    Return ONLY valid JSON:
     {{
       "subject": "...",
       "html_body": "...",

@@ -8,14 +8,23 @@
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/dashboard.css">
     <style>
-        .tabs { margin-bottom: 20px; }
         .section-pane { display: none; }
         .section-pane.active { display: block; }
         
-        .editor-toolbar { padding: 8px; border: 1px solid var(--border); border-bottom: none; background: var(--bg-secondary); border-radius: var(--radius-md) var(--radius-md) 0 0; display:flex; gap:8px;}
-        .editor-content { min-height: 300px; padding: 16px; border: 1px solid var(--border); border-radius: 0 0 var(--radius-md) var(--radius-md); background: #fff; outline: none; }
+        .editor-container { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: #fff; }
+        .editor-toolbar { padding: 12px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); display: flex; gap: 8px; flex-wrap: wrap; }
+        .editor-content { min-height: 400px; padding: 24px; outline: none; font-family: var(--font-sans); line-height: 1.6; }
         
-        .ai-drawer { border-left: 1px solid var(--border); padding-left: 24px; }
+        .ai-panel { background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 20px; border: 1px solid var(--border); }
+        .spam-meter { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .spam-meter-fill { height: 100%; width: 0%; transition: width 0.3s, background 0.3s; }
+        
+        .recipient-preview { max-height: 400px; overflow-y: auto; margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); }
+        
+        .log-feed { background: #000; color: #00ff00; font-family: monospace; padding: 16px; border-radius: var(--radius-md); height: 200px; overflow-y: auto; font-size: 12px; }
+        .log-entry { margin-bottom: 4px; }
+        
+        .progress-section { margin-top: 24px; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -26,7 +35,7 @@
                 <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
                 <a href="/pages/bulk-mail.html" class="sidebar-nav-item active">Bulk Mail</a>
                 <a href="/pages/history.html" class="sidebar-nav-item">History</a>
-                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
                 <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
                 <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
                 <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
@@ -37,142 +46,369 @@
 
         <main class="main-content">
             <header class="page-header">
-                <h1 class="page-title">New Campaign</h1>
+                <h1 class="page-title">Bulk Outreach Engine</h1>
+                <div class="page-header-actions" id="jobControls" style="display:none">
+                    <button id="pauseJobBtn" class="btn btn-secondary">Pause</button>
+                    <button id="resumeJobBtn" class="btn btn-primary" style="display:none">Resume</button>
+                    <button id="cancelJobBtn" class="btn btn-danger">Cancel</button>
+                </div>
             </header>
 
             <div class="tabs" id="campaignTabs">
                 <div class="tab-item active" data-target="compose">Compose</div>
+                <div class="tab-item" data-target="preview_tab">Preview</div>
                 <div class="tab-item" data-target="contacts">Recipients</div>
                 <div class="tab-item" data-target="schedule">Schedule & Send</div>
+                <div class="tab-item" data-target="history">History</div>
             </div>
 
+            <!-- Tab 1: Compose -->
             <div id="compose" class="section-pane active">
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 32px;">
                     <div>
                         <div class="input-group">
-                            <label class="input-label">Subject</label>
-                            <input type="text" id="subject" class="input" placeholder="Email Subject">
-                        </div>
-                        <div class="input-group">
-                            <label class="input-label">Body</label>
-                            <div class="editor-toolbar">
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="document.execCommand('bold',false,null)">B</button>
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="document.execCommand('italic',false,null)">I</button>
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="document.execCommand('underline',false,null)">U</button>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label class="input-label">Subject Line</label>
+                                <span id="spamLabel" style="font-size:11px; font-weight:700; color:var(--text-muted)">SPAM SCORE: 0%</span>
                             </div>
-                            <div id="htmlBody" class="editor-content" contenteditable="true"></div>
+                            <input type="text" id="subject" class="input" placeholder="Enter high-converting subject line...">
+                            <div class="spam-meter"><div id="spamMeterFill" class="spam-meter-fill"></div></div>
                         </div>
-                        <div style="display:flex; justify-content:space-between;">
-                            <div>Chars: <span id="charCount">0</span></div>
-                            <button id="saveTemplateBtn" class="btn btn-secondary">Save as Template</button>
+
+                        <div class="editor-container">
+                            <div class="editor-toolbar">
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('bold')" title="Bold"><strong>B</strong></button>
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('italic')" title="Italic"><em>I</em></button>
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
+                                <div style="width:1px; height:20px; background:var(--border); margin:0 4px;"></div>
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('formatBlock', 'h2')">H2</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('insertUnorderedList')">• List</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="insertLink()">Link</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="insertImage()">Image</button>
+                                <div style="width:1px; height:20px; background:var(--border); margin:0 4px;"></div>
+                                <select id="templateSelect" class="input" style="width:auto; padding:4px 8px; font-size:12px;">
+                                    <option value="">Load Template...</option>
+                                </select>
+                            </div>
+                            <div id="htmlBody" class="editor-content" contenteditable="true" placeholder="Start writing your masterpiece..."></div>
+                        </div>
+                        
+                        <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-size:13px; color:var(--text-secondary)">
+                                <span id="wordCount">0</span> words | <span id="charCount">0</span> characters
+                            </div>
+                            <button id="saveAsTemplateBtn" class="btn btn-secondary">Save as New Template</button>
                         </div>
                     </div>
-                    
-                    <div class="ai-drawer">
-                        <h3>AI Compose</h3>
-                        <div class="input-group" style="margin-top:16px;">
-                            <label class="input-label">Goal</label>
-                            <textarea id="aiGoal" class="input" rows="2">Book a demo</textarea>
-                        </div>
+
+                    <div class="ai-panel">
+                        <h3 style="margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                            AI Smart Compose
+                        </h3>
                         <div class="input-group">
-                            <label class="input-label">Industry</label>
-                            <input type="text" id="aiIndustry" class="input" value="SaaS">
+                            <label class="input-label">Goal</label>
+                            <textarea id="aiGoal" class="input" rows="2" placeholder="e.g. Schedule a demo for our SEO tool"></textarea>
                         </div>
                         <div class="input-group">
                             <label class="input-label">Tone</label>
                             <select id="aiTone" class="input">
-                                <option value="professional">Professional</option>
-                                <option value="casual">Casual</option>
+                                <option value="professional">Professional & Direct</option>
+                                <option value="casual">Friendly & Casual</option>
+                                <option value="urgent">Urgent & Bold</option>
+                                <option value="creative">Creative & Witty</option>
                             </select>
                         </div>
-                        <div class="input-group">
-                            <label class="input-label">Sender Name</label>
-                            <input type="text" id="aiSender" class="input" value="John">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                            <div class="input-group">
+                                <label class="input-label">Sender Name</label>
+                                <input type="text" id="aiSender" class="input" placeholder="Your Name">
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">Company</label>
+                                <input type="text" id="aiCompany" class="input" placeholder="Your Org">
+                            </div>
                         </div>
                         <div class="input-group">
-                            <label class="input-label">Sender Company</label>
-                            <input type="text" id="aiCompany" class="input" value="Acme Corp">
+                            <label class="input-label">Value Proposition</label>
+                            <textarea id="aiValue" class="input" rows="3" placeholder="What problem do you solve?"></textarea>
                         </div>
-                        <div class="input-group">
-                            <label class="input-label">Value Prop</label>
-                            <textarea id="aiValue" class="input" rows="2">We help you save 20 hours a week</textarea>
+                        <button id="aiGenerateBtn" class="btn btn-primary" style="width:100%; margin-bottom:12px;">Generate Draft</button>
+                        
+                        <div style="border-top: 1px solid var(--border); padding-top:16px; margin-top:16px;">
+                            <label class="input-label">Improve current draft</label>
+                            <input type="text" id="aiImproveInstr" class="input" placeholder="e.g. Make it shorter and punchier">
+                            <button id="aiImproveBtn" class="btn btn-secondary btn-sm" style="width:100%; margin-top:8px;">Apply AI Improvement</button>
                         </div>
-                        <button id="aiGenerateBtn" class="btn btn-primary" style="width:100%">Generate Email</button>
                     </div>
                 </div>
             </div>
 
+            <!-- Tab 2: Preview -->
+            <div id="preview_tab" class="section-pane">
+                <div class="card" style="max-width: 800px; margin: 0 auto;">
+                    <div style="padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                        <strong>Desktop Preview</strong>
+                        <div class="badge badge-neutral">Recipient: {first_name}</div>
+                    </div>
+                    <div id="emailPreviewFrame" style="padding:32px; min-height:500px; background:#fff; overflow-y:auto;">
+                        <h2 id="previewSubject" style="margin-top:0; border-bottom:1px solid var(--border); padding-bottom:12px; font-size:18px;"></h2>
+                        <div id="previewBody" style="margin-top:24px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Recipients -->
             <div id="contacts" class="section-pane">
                 <div class="card">
-                    <div class="input-group">
-                        <label class="input-label">Select Saved List</label>
-                        <select id="contactListSelect" class="input">
-                            <option value="">-- Select a List --</option>
-                        </select>
+                    <div style="display:flex; gap:24px; margin-bottom:24px;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="radio" name="recipientSource" value="saved" checked> Saved List
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="radio" name="recipientSource" value="csv"> Upload CSV
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="radio" name="recipientSource" value="sheets"> Google Sheets
+                        </label>
                     </div>
-                    <p style="text-align:center; margin: 16px 0;">OR</p>
-                    <div class="input-group">
-                        <label class="input-label">Provide Contact IDs (comma separated)</label>
-                        <input type="text" id="manualContactIds" class="input" placeholder="uuid1, uuid2">
+
+                    <div id="sourceSaved" class="source-panel">
+                        <div class="input-group">
+                            <label class="input-label">Select List</label>
+                            <select id="contactListSelect" class="input">
+                                <option value="">-- Choose a list --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="sourceCsv" class="source-panel" style="display:none">
+                        <div style="border:2px dashed var(--border); padding:40px; text-align:center; border-radius:var(--radius-lg); cursor:pointer;" onclick="document.getElementById('csvFile').click()">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:12px; color:var(--text-muted)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path></svg>
+                            <p>Click to upload CSV or drag and drop</p>
+                            <input type="file" id="csvFile" style="display:none" accept=".csv">
+                        </div>
+                    </div>
+
+                    <div id="sourceSheets" class="source-panel" style="display:none">
+                        <div class="input-group">
+                            <label class="input-label">Google Sheet URL</label>
+                            <input type="text" id="sheetUrl" class="input" placeholder="https://docs.google.com/spreadsheets/d/...">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Range (e.g. Sheet1!A:C)</label>
+                            <input type="text" id="sheetRange" class="input" value="Sheet1!A:Z">
+                        </div>
+                        <button id="testSheetsBtn" class="btn btn-secondary btn-sm">Verify Sheets Access</button>
+                    </div>
+
+                    <div id="previewArea" style="margin-top:32px; display:none;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 id="recipientCount">0 Recipients Loaded</h3>
+                            <div style="display:flex; gap:12px;">
+                                <div id="validationStats" style="font-size:12px; color:var(--text-secondary)"></div>
+                                <button id="validateBtn" class="btn btn-secondary btn-sm">Validate All Emails</button>
+                            </div>
+                        </div>
+                        <div class="table-container recipient-preview">
+                            <table class="table">
+                                <thead><tr><th>Email</th><th>Name</th><th>Company</th><th>Status</th></tr></thead>
+                                <tbody id="recipientPreviewBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Tab 4: Schedule & Send -->
             <div id="schedule" class="section-pane">
-                <div class="card">
-                    <div class="input-group">
-                        <label class="input-label">Schedule At</label>
-                        <input type="datetime-local" id="scheduleAt" class="input">
-                        <small style="color:var(--text-secondary)">Leave blank to send immediately</small>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap:32px;">
+                    <div class="card">
+                        <h3>Configuration</h3>
+                        <div class="input-group" style="margin-top:16px;">
+                            <label class="input-label">Campaign Name</label>
+                            <input type="text" id="campaignName" class="input" placeholder="e.g. Q4 Outreach">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Send Delay (minutes): <span id="delayVal">5</span></label>
+                            <input type="range" id="delayRange" min="1" max="30" value="5" style="width:100%">
+                            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); margin-top:4px;">
+                                <span>1m</span><span>10m</span><span>20m</span><span>30m</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Daily Send Limit</label>
+                            <input type="number" id="dailyLimit" class="input" value="500">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Scheduling</label>
+                            <div style="display:flex; gap:24px; margin:8px 0;">
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                    <input type="radio" name="scheduleType" value="now" checked> Send Now
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                    <input type="radio" name="scheduleType" value="later"> Schedule Later
+                                </label>
+                            </div>
+                            <input type="datetime-local" id="scheduleAt" class="input" style="display:none">
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-label">Delay Between Emails (seconds)</label>
-                        <input type="number" id="intervalSeconds" class="input" value="300" min="60">
+
+                    <div class="card">
+                        <h3>Advanced & Attachments</h3>
+                        <div class="input-group" style="margin-top:16px;">
+                            <label class="input-label">From Name Override</label>
+                            <input type="text" id="fromOverride" class="input" placeholder="e.g. CEO @ Acme">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Reply-To Override</label>
+                            <input type="email" id="replyToOverride" class="input" placeholder="replies@company.com">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Attachments</label>
+                            <input type="file" id="attachments" class="input" multiple>
+                            <div id="attachmentList" style="margin-top:8px; font-size:12px; color:var(--text-secondary)"></div>
+                        </div>
+                        
+                        <div style="margin-top:32px; border-top:1px solid var(--border); padding-top:24px;">
+                            <button id="startCampaignBtn" class="btn btn-primary btn-lg" style="width:100%">🚀 Launch Campaign</button>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-label">Daily Limit</label>
-                        <input type="number" id="dailyLimit" class="input" value="500">
+                </div>
+
+                <div id="liveProgress" class="progress-section" style="display:none">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div>
+                            <strong id="jobStatusLabel">Campaign Status: Running</strong>
+                            <div id="currentRecipient" style="font-size:12px; color:var(--text-secondary)">Next: ...</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div id="jobProgressText" style="font-weight:700">0%</div>
+                            <div id="jobStats" style="font-size:12px; color:var(--text-secondary)">0 sent / 0 total</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="jobProgressBar" class="progress-bar-fill"></div>
                     </div>
                     
-                    <button id="startCampaignBtn" class="btn btn-primary btn-lg" style="margin-top:24px; width:100%">Start Campaign</button>
+                    <div style="margin-top:24px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <label class="input-label">Live Activity Feed</label>
+                            <div class="badge badge-success" id="liveBadge" style="animation: pulse 2s infinite">LIVE</div>
+                        </div>
+                        <div class="log-feed" id="logFeed">
+                            <div class="log-entry">Waiting for job to initialize...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
+            <!-- Tab 5: History -->
+            <div id="history" class="section-pane">
+                <div class="card">
+                    <div class="table-container">
+                        <table class="table">
+                            <thead><tr><th>Campaign</th><th>Date</th><th>Stats</th><th>Status</th><th>Action</th></tr></thead>
+                            <tbody id="historyBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
     <div id="toastContainer" class="toast-container"></div>
     
+    <!-- Modal for Saving Template Name -->
+    <div id="templateModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">Save Template</div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Template Name</label>
+                    <input type="text" id="newTemplateName" class="input" placeholder="e.g. First Outreach - Agency">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button id="confirmSaveTemplate" class="btn btn-primary">Save Template</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAuth();
         
+        let activeJobId = null;
+        let jobPollInterval = null;
+        let loadedContacts = [];
+
+        // --- UI UTILS ---
         function showToast(msg, type="success") {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
-            toast.textContent = msg;
+            toast.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> ${msg}`;
             container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
+        function formatDoc(cmd, val) { document.execCommand(cmd, false, val); }
+        function insertLink() { const url = prompt("Enter URL:"); if(url) formatDoc('createLink', url); }
+        function insertImage() { const url = prompt("Enter Image URL:"); if(url) formatDoc('insertImage', url); }
+
+        function closeModal() { document.getElementById('templateModal').style.display = 'none'; }
+
+        // --- TAB SWITCHING ---
         document.querySelectorAll('.tab-item').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.section-pane').forEach(p => p.classList.remove('active'));
                 tab.classList.add('active');
                 document.getElementById(tab.dataset.target).classList.add('active');
+                if(tab.dataset.target === 'preview_tab') updatePreview();
             });
         });
 
+        // --- COMPOSE LOGIC ---
+        const subjectInput = document.getElementById('subject');
+        const htmlBody = document.getElementById('htmlBody');
+        const spamFill = document.getElementById('spamMeterFill');
+        const spamLabel = document.getElementById('spamLabel');
+
+        subjectInput.addEventListener('input', () => {
+            const val = subjectInput.value.toLowerCase();
+            const spamWords = ['free', 'winner', 'urgent', 'click here', 'act now', 'limited time', 'guaranteed', 'cash', 'prize'];
+            let count = 0;
+            spamWords.forEach(w => { if(val.includes(w)) count++; });
+            const score = Math.min(100, count * 20);
+            spamFill.style.width = score + '%';
+            spamFill.style.background = score > 60 ? 'var(--danger)' : (score > 30 ? 'var(--warning)' : 'var(--success)');
+            spamLabel.textContent = `SPAM SCORE: ${score}%`;
+        });
+
+        htmlBody.addEventListener('input', () => {
+            const text = htmlBody.innerText;
+            document.getElementById('charCount').textContent = text.length;
+            document.getElementById('wordCount').textContent = text.trim() ? text.trim().split(/\s+/).length : 0;
+        });
+
+        function updatePreview() {
+            document.getElementById('previewSubject').textContent = subjectInput.value || "No Subject";
+            let body = htmlBody.innerHTML || "No content yet.";
+            body = body.replace(/{first_name}/g, '<span style="background:var(--primary-light); padding:2px 4px; border-radius:4px; font-weight:600">John</span>');
+            body = body.replace(/{company}/g, '<span style="background:var(--primary-light); padding:2px 4px; border-radius:4px; font-weight:600">Acme Corp</span>');
+            document.getElementById('previewBody').innerHTML = body;
+        }
+
+        // --- AI LOGIC ---
         document.getElementById('aiGenerateBtn').addEventListener('click', async (e) => {
-            const btn = e.target;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner spinner-sm"></span> Generating...';
+            const btn = e.target; btn.disabled = true; btn.textContent = "AI is thinking...";
             try {
                 const body = {
                     goal: document.getElementById('aiGoal').value,
-                    industry: document.getElementById('aiIndustry').value,
+                    industry: "General", 
                     tone: document.getElementById('aiTone').value,
                     sender_name: document.getElementById('aiSender').value,
                     sender_company: document.getElementById('aiCompany').value,
@@ -180,88 +416,168 @@
                     recipient_name: "{first_name}"
                 };
                 const res = await api.post('/ai/compose', body);
-                document.getElementById('subject').value = res.subject;
-                document.getElementById('htmlBody').innerHTML = res.html_body;
-                showToast("Email generated successfully");
-            } catch (err) {
-                showToast(err.message, "danger");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'Generate Email';
-            }
+                subjectInput.value = res.subject;
+                htmlBody.innerHTML = res.html_body;
+                subjectInput.dispatchEvent(new Event('input'));
+                htmlBody.dispatchEvent(new Event('input'));
+                showToast("Draft generated!");
+            } catch (err) { showToast(err.message, "danger"); }
+            finally { btn.disabled = false; btn.textContent = "Generate Draft"; }
         });
 
-        document.getElementById('saveTemplateBtn').addEventListener('click', async () => {
-            const subject = document.getElementById('subject').value;
-            const htmlBody = document.getElementById('htmlBody').innerHTML;
-            if(!subject || !htmlBody) return showToast("Subject and body required", "warning");
-            
+        document.getElementById('aiImproveBtn').addEventListener('click', async (e) => {
+            const instr = document.getElementById('aiImproveInstr').value;
+            if(!instr) return showToast("Enter instruction", "warning");
+            const btn = e.target; btn.disabled = true;
             try {
-                const res = await api.post('/template', { name: "Saved Template " + new Date().toLocaleTimeString(), subject, html_body: htmlBody });
-                showToast("Template saved!", "success");
-                window.currentTemplateId = res.id;
-            } catch (err) {
-                showToast("Failed to save template", "danger");
-            }
+                const res = await api.post('/ai/improve', {
+                    current_subject: subjectInput.value,
+                    current_html_body: htmlBody.innerHTML,
+                    instruction: instr
+                });
+                subjectInput.value = res.subject;
+                htmlBody.innerHTML = res.html_body;
+                showToast("Draft improved!");
+            } catch (err) { showToast(err.message, "danger"); }
+            finally { btn.disabled = false; }
         });
 
+        // --- RECIPIENTS LOGIC ---
+        document.getElementsByName('recipientSource').forEach(r => {
+            r.addEventListener('change', (e) => {
+                document.querySelectorAll('.source-panel').forEach(p => p.style.display = 'none');
+                if(e.target.value === 'saved') document.getElementById('sourceSaved').style.display = 'block';
+                if(e.target.value === 'csv') document.getElementById('sourceCsv').style.display = 'block';
+                if(e.target.value === 'sheets') document.getElementById('sourceSheets').style.display = 'block';
+            });
+        });
+
+        document.getElementById('contactListSelect').addEventListener('change', async (e) => {
+            if(!e.target.value) return;
+            try {
+                const res = await api.get(`/contacts/${e.target.value}`);
+                renderRecipientPreview(res.contacts);
+            } catch(err) { showToast("Failed to load list", "danger"); }
+        });
+
+        function renderRecipientPreview(contacts) {
+            loadedContacts = contacts;
+            const body = document.getElementById('recipientPreviewBody');
+            body.innerHTML = '';
+            document.getElementById('previewArea').style.display = 'block';
+            document.getElementById('recipientCount').textContent = `${contacts.length} Recipients Loaded`;
+            
+            contacts.forEach(c => {
+                let badgeClass = 'badge-neutral';
+                if(c.email_status === 'valid') badgeClass = 'badge-success';
+                if(c.email_status === 'invalid') badgeClass = 'badge-danger';
+                body.innerHTML += `<tr>
+                    <td>${c.email}</td>
+                    <td>${c.name || '--'}</td>
+                    <td>${c.org || '--'}</td>
+                    <td><span class="badge ${badgeClass}">${c.email_status || 'unknown'}</span></td>
+                </tr>`;
+            });
+        }
+
+        // --- SCHEDULING LOGIC ---
+        document.getElementById('delayRange').addEventListener('input', (e) => {
+            document.getElementById('delayVal').textContent = e.target.value;
+        });
+
+        document.getElementsByName('scheduleType').forEach(r => {
+            r.addEventListener('change', (e) => {
+                document.getElementById('scheduleAt').style.display = e.target.value === 'later' ? 'block' : 'none';
+            });
+        });
+
+        // --- CAMPAIGN START ---
         document.getElementById('startCampaignBtn').addEventListener('click', async (e) => {
-            const btn = e.target;
-            
-            let tId = window.currentTemplateId;
-            if(!tId) {
-                try {
-                    const res = await api.post('/template', { 
-                        name: "Auto Template " + Date.now(), 
-                        subject: document.getElementById('subject').value, 
-                        html_body: document.getElementById('htmlBody').innerHTML 
-                    });
-                    tId = res.id;
-                } catch(err) {
-                    return showToast("Failed to create template", "danger");
-                }
-            }
-            
-            btn.disabled = true;
-            btn.textContent = "Starting...";
-            
-            const payload = {
-                template_id: tId,
-                contact_list_id: document.getElementById('contactListSelect').value || null,
-                interval_seconds: parseInt(document.getElementById('intervalSeconds').value) || 300,
-                daily_limit: parseInt(document.getElementById('dailyLimit').value) || 500,
-            };
-            
-            const scheduleVal = document.getElementById('scheduleAt').value;
-            if(scheduleVal) payload.schedule_at = new Date(scheduleVal).toISOString();
-            
-            const manualIds = document.getElementById('manualContactIds').value;
-            if(manualIds) payload.contact_ids = manualIds.split(',').map(s=>s.trim()).filter(s=>s);
+            if(!subjectInput.value || !htmlBody.innerText) return showToast("Subject and body required", "warning");
+            const btn = e.target; btn.disabled = true; btn.textContent = "Launching...";
             
             try {
+                // Auto-save template if needed or just use current
+                const tRes = await api.post('/template', {
+                    name: "Campaign " + new Date().toLocaleString(),
+                    subject: subjectInput.value,
+                    html_body: htmlBody.innerHTML
+                });
+
+                const payload = {
+                    template_id: tRes.id,
+                    contact_list_id: document.getElementById('contactListSelect').value || null,
+                    interval_seconds: parseInt(document.getElementById('delayRange').value) * 60,
+                    daily_limit: parseInt(document.getElementById('dailyLimit').value) || 500,
+                    campaign_name: document.getElementById('campaignName').value || "Unnamed Campaign"
+                };
+                
+                if(document.getElementById('scheduleAt').value) payload.schedule_at = new Date(document.getElementById('scheduleAt').value).toISOString();
+                
                 const res = await api.post('/mail/jobs', payload);
-                showToast("Campaign queued! Job ID: " + res.job_id, "success");
-                setTimeout(() => window.location.href = "/dashboard.html", 1500);
-            } catch (err) {
-                showToast(err.message, "danger");
-                btn.disabled = false;
-                btn.textContent = "Start Campaign";
-            }
+                activeJobId = res.job_id;
+                showToast("Campaign started successfully!", "success");
+                startJobPolling(activeJobId);
+            } catch (err) { showToast(err.message, "danger"); btn.disabled = false; btn.textContent = "Launch Campaign"; }
         });
 
-        async function loadData() {
+        function startJobPolling(jobId) {
+            document.getElementById('liveProgress').style.display = 'block';
+            document.getElementById('jobControls').style.display = 'flex';
+            if(jobPollInterval) clearInterval(jobPollInterval);
+            
+            jobPollInterval = setInterval(async () => {
+                try {
+                    const status = await api.get(`/mail/jobs/${jobId}/status`);
+                    document.getElementById('jobProgressBar').style.width = status.progress_pct + '%';
+                    document.getElementById('jobProgressText').textContent = Math.round(status.progress_pct) + '%';
+                    document.getElementById('jobStats').textContent = `${status.sent_count} sent / ${status.total_count} total`;
+                    document.getElementById('jobStatusLabel').textContent = `Campaign Status: ${status.status.toUpperCase()}`;
+                    
+                    if(status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
+                        clearInterval(jobPollInterval);
+                        document.getElementById('liveBadge').style.animation = 'none';
+                        document.getElementById('liveBadge').textContent = 'FINISHED';
+                        document.getElementById('liveBadge').className = 'badge badge-neutral';
+                    }
+                } catch (err) { clearInterval(jobPollInterval); }
+            }, 5000);
+        }
+
+        // --- HISTORY & INITIAL DATA ---
+        async function loadInitial() {
             try {
                 const lists = await api.get('/contacts/lists');
                 const sel = document.getElementById('contactListSelect');
-                lists.items.forEach(l => {
-                    const opt = document.createElement('option');
-                    opt.value = l.id;
-                    opt.textContent = `${l.name} (${l.total_contacts} contacts)`;
-                    sel.appendChild(opt);
+                lists.items.forEach(l => { sel.innerHTML += `<option value="${l.id}">${l.name} (${l.total_contacts})</option>`; });
+                
+                const templates = await api.get('/template');
+                const tSel = document.getElementById('templateSelect');
+                templates.forEach(t => { tSel.innerHTML += `<option value="${t.id}">${t.name}</option>`; });
+                
+                tSel.addEventListener('change', async () => {
+                    if(!tSel.value) return;
+                    const t = await api.get(`/template/${tSel.value}`);
+                    subjectInput.value = t.subject;
+                    htmlBody.innerHTML = t.html_body;
+                    subjectInput.dispatchEvent(new Event('input'));
                 });
-            } catch(err) {}
+
+                const history = await api.get('/mail/jobs?limit=10');
+                const hBody = document.getElementById('historyBody');
+                history.forEach(j => {
+                    hBody.innerHTML += `<tr>
+                        <td>${j.campaign_name || j._id.substring(0,8)}</td>
+                        <td>${new Date(j.created_at).toLocaleDateString()}</td>
+                        <td>${j.status}</td>
+                        <td><span class="badge badge-neutral">${j.status}</span></td>
+                        <td><button class="btn btn-sm btn-ghost" onclick="startJobPolling('${j._id}')">View</button></td>
+                    </tr>`;
+                });
+            } catch(e){}
         }
-        loadData();
+
+        loadInitial();
     </script>
 </body>
 </html>

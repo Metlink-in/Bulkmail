@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .profile-card { max-width: 800px; margin: 0 auto; }
+        .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; margin-bottom: 16px; border: 4px solid var(--primary-light); }
+        .profile-header { display: flex; gap: 24px; align-items: flex-end; margin-bottom: 32px; }
+        .profile-info h2 { margin: 0; font-size: 24px; }
+        .profile-info p { margin: 4px 0 0; color: var(--text-secondary); }
+    </style>
 </head>
 <body>
     <div class="dashboard-layout">
@@ -16,7 +23,7 @@
                 <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
                 <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
                 <a href="/pages/history.html" class="sidebar-nav-item">History</a>
-                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
                 <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
                 <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
                 <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
@@ -27,48 +34,108 @@
 
         <main class="main-content">
             <header class="page-header">
-                <h1 class="page-title">Profile Settings</h1>
+                <h1 class="page-title">User Account</h1>
+                <div class="page-header-actions">
+                    <button class="btn btn-primary" onclick="toggleEdit()">Edit Profile</button>
+                </div>
             </header>
 
-            <div class="card" style="max-width: 600px;">
-                <form id="profileForm">
-                    <div class="input-group">
-                        <label class="input-label">Name</label>
-                        <input type="text" id="pName" class="input">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="avatarCircle">U</div>
+                    <div class="profile-info">
+                        <h2 id="dispName">User Name</h2>
+                        <p id="dispEmail">user@example.com</p>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <span class="badge badge-info" id="dispRole">USER</span>
+                            <span class="badge badge-neutral" id="dispOrg">No Organization</span>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-label">Organization</label>
-                        <input type="text" id="pOrg" class="input">
+                </div>
+
+                <div class="grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+                    <div class="stat-card">
+                        <div class="lbl">Total Emails Sent</div>
+                        <div class="val" id="statSent">0</div>
                     </div>
-                    <hr style="margin:24px 0; border:0; border-top:1px solid var(--border)">
-                    <h3>Change Password</h3>
-                    <div class="input-group" style="margin-top:16px;">
-                        <label class="input-label">Current Password</label>
-                        <input type="password" id="pCurr" class="input">
+                    <div class="stat-card">
+                        <div class="lbl">Member Since</div>
+                        <div class="val" id="statJoined" style="font-size:18px;">Jan 2024</div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-label">New Password</label>
-                        <input type="password" id="pNew" class="input">
+                </div>
+
+                <div id="editSection" style="display:none">
+                    <div class="card">
+                        <h3>Update Information</h3>
+                        <form id="profileForm" style="margin-top:16px;">
+                            <div class="input-group">
+                                <label class="input-label">Full Name</label>
+                                <input type="text" id="pName" class="input">
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">Organization Name</label>
+                                <input type="text" id="pOrg" class="input">
+                            </div>
+                            
+                            <hr style="margin:24px 0; border:0; border-top:1px solid var(--border)">
+                            
+                            <h3>Security</h3>
+                            <div class="input-group" style="margin-top:16px;">
+                                <label class="input-label">Current Password</label>
+                                <input type="password" id="pCurr" class="input" placeholder="Required for password change">
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">New Password</label>
+                                <input type="password" id="pNew" class="input">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save Changes</button>
+                            <button type="button" class="btn btn-ghost" onclick="toggleEdit()" style="margin-top:16px; margin-left:8px;">Cancel</button>
+                        </form>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save Profile</button>
-                    <div id="pMsg" style="margin-top:16px; font-size:14px;"></div>
-                </form>
+                </div>
             </div>
         </main>
     </div>
 
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAuth();
-        
+
+        function showToast(msg, type="success") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         async function loadProfile() {
             try {
                 const p = await api.get('/user/profile');
+                document.getElementById('dispName').textContent = p.name;
+                document.getElementById('dispEmail').textContent = p.email;
+                document.getElementById('dispRole').textContent = p.role.toUpperCase();
+                document.getElementById('dispOrg').textContent = p.org_name || "No Organization";
+                document.getElementById('avatarCircle').textContent = p.name.charAt(0).toUpperCase();
+                
                 document.getElementById('pName').value = p.name;
                 document.getElementById('pOrg').value = p.org_name || "";
+                
+                const stats = await api.get('/user/stats');
+                document.getElementById('statSent').textContent = stats.total_sent_all_time;
+                document.getElementById('statJoined').textContent = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
             } catch (err) { console.error(err); }
         }
-        
+
+        function toggleEdit() {
+            const section = document.getElementById('editSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
         document.getElementById('profileForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const payload = {
@@ -82,19 +149,14 @@
                 payload.new_password = newP;
             }
             
-            const msg = document.getElementById('pMsg');
             try {
                 await api.put('/user/profile', payload);
-                msg.textContent = "Profile updated successfully!";
-                msg.style.color = "var(--success)";
-                document.getElementById('pCurr').value = "";
-                document.getElementById('pNew').value = "";
-            } catch (err) {
-                msg.textContent = err.message;
-                msg.style.color = "var(--danger)";
-            }
+                showToast("Profile updated!");
+                toggleEdit();
+                loadProfile();
+            } catch (err) { showToast(err.message, "danger"); }
         });
-        
+
         loadProfile();
     </script>
 </body>

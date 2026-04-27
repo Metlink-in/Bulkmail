@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .filter-bar { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; align-items: flex-end; }
+        .expanded-row { background: var(--bg-secondary); }
+        .sub-table { width: 100%; font-size: 12px; }
+        .sub-table th { background: var(--border); }
+    </style>
 </head>
 <body>
     <div class="dashboard-layout">
@@ -16,7 +22,7 @@
                 <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
                 <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
                 <a href="/pages/history.html" class="sidebar-nav-item active">History</a>
-                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
                 <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
                 <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
                 <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
@@ -28,69 +34,163 @@
         <main class="main-content">
             <header class="page-header">
                 <h1 class="page-title">Campaign History</h1>
+                <div class="page-header-actions">
+                    <button class="btn btn-secondary" onclick="exportHistory()">Export CSV</button>
+                </div>
             </header>
+
+            <div class="filter-bar card">
+                <div class="input-group" style="margin-bottom:0">
+                    <label class="input-label">Search</label>
+                    <input type="text" id="search" class="input" placeholder="Campaign name..." style="width:200px">
+                </div>
+                <div class="input-group" style="margin-bottom:0">
+                    <label class="input-label">Status</label>
+                    <select id="statusFilter" class="input" style="width:150px">
+                        <option value="">All Statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="running">Running</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-bottom:0">
+                    <label class="input-label">Date From</label>
+                    <input type="date" id="dateFrom" class="input">
+                </div>
+                <button class="btn btn-primary" onclick="loadJobs()">Filter</button>
+            </div>
 
             <div class="card">
                 <div class="table-container">
-                    <table class="table">
+                    <table class="table" id="historyTable">
                         <thead>
                             <tr>
-                                <th>Job ID</th>
-                                <th>Status</th>
+                                <th>Campaign</th>
                                 <th>Date</th>
+                                <th>Total</th>
+                                <th>Sent</th>
+                                <th>Failed</th>
+                                <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="jobsBody">
-                            <tr><td colspan="4" style="text-align:center">Loading...</td></tr>
+                            <tr><td colspan="7" style="text-align:center">Loading...</td></tr>
                         </tbody>
                     </table>
+                </div>
+                
+                <div style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
+                    <div id="paginationInfo" style="font-size:14px; color:var(--text-secondary)">Showing 0 jobs</div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-sm btn-secondary" onclick="changePage(-1)">Prev</button>
+                        <button class="btn btn-sm btn-secondary" onclick="changePage(1)">Next</button>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAuth();
-        
+        let currentPage = 1;
+
         async function loadJobs() {
             try {
-                const jobs = await api.get('/mail/jobs');
+                const search = document.getElementById('search').value;
+                const status = document.getElementById('statusFilter').value;
+                const dateFrom = document.getElementById('dateFrom').value;
+                
+                let query = `?page=${currentPage}&limit=25`;
+                if(status) query += `&status=${status}`;
+                if(search) query += `&search=${search}`;
+                
+                const jobs = await api.get(`/mail/jobs${query}`);
                 const tBody = document.getElementById('jobsBody');
                 tBody.innerHTML = '';
+                
                 if(jobs.length === 0) {
-                    tBody.innerHTML = '<tr><td colspan="4" style="text-align:center">No campaigns found.</td></tr>';
+                    tBody.innerHTML = '<tr><td colspan="7" style="text-align:center">No campaigns found.</td></tr>';
                     return;
                 }
                 
-                jobs.forEach(j => {
-                    let btnHtml = '';
-                    if(j.status === 'running' || j.status === 'queued') {
-                        btnHtml = `<button onclick="pauseJob('${j._id}')" class="btn btn-sm btn-warning">Pause</button>`;
-                    } else if (j.status === 'paused') {
-                        btnHtml = `<button onclick="resumeJob('${j._id}')" class="btn btn-sm btn-success">Resume</button>`;
-                    }
-                    if(j.status !== 'completed' && j.status !== 'cancelled') {
-                        btnHtml += ` <button onclick="cancelJob('${j._id}')" class="btn btn-sm btn-danger">Cancel</button>`;
-                    }
+                for(const j of jobs) {
+                    const row = document.createElement('tr');
+                    row.style.cursor = 'pointer';
+                    row.onclick = (e) => { if(e.target.tagName !== 'BUTTON') toggleRow(j._id); };
                     
-                    tBody.innerHTML += `<tr>
-                        <td>${j._id.substring(0,8)}</td>
-                        <td><span class="badge badge-neutral">${j.status}</span></td>
-                        <td>${new Date(j.created_at).toLocaleString()}</td>
-                        <td>${btnHtml}</td>
-                    </tr>`;
-                });
-            } catch (err) {
-                console.error(err);
+                    let badgeClass = 'badge-neutral';
+                    if(j.status === 'completed') badgeClass = 'badge-success';
+                    if(j.status === 'failed') badgeClass = 'badge-danger';
+                    if(j.status === 'running') badgeClass = 'badge-info';
+                    
+                    row.innerHTML = `
+                        <td><strong>${j.campaign_name || j._id.substring(0,8)}</strong></td>
+                        <td>${new Date(j.created_at).toLocaleDateString()}</td>
+                        <td>${j.total_count || '--'}</td>
+                        <td>${j.sent_count || 0}</td>
+                        <td>${j.failed_count || 0}</td>
+                        <td><span class="badge ${badgeClass}">${j.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-ghost" onclick="toggleRow('${j._id}')">Details</button>
+                        </td>
+                    `;
+                    tBody.appendChild(row);
+                    
+                    // Hidden Detail Row
+                    const detailRow = document.createElement('tr');
+                    detailRow.id = `detail-${j._id}`;
+                    detailRow.className = 'expanded-row';
+                    detailRow.style.display = 'none';
+                    detailRow.innerHTML = `<td colspan="7" id="logs-${j._id}" style="padding:24px;">Loading logs...</td>`;
+                    tBody.appendChild(detailRow);
+                }
+                document.getElementById('paginationInfo').textContent = `Showing ${jobs.length} campaigns`;
+            } catch (err) { console.error(err); }
+        }
+
+        async function toggleRow(id) {
+            const row = document.getElementById(`detail-${id}`);
+            if(row.style.display === 'none') {
+                row.style.display = 'table-row';
+                const container = document.getElementById(`logs-${id}`);
+                try {
+                    const logs = await api.get(`/mail/logs?job_id=${id}&limit=10`);
+                    if(logs.length === 0) {
+                        container.innerHTML = 'No send logs found for this job.';
+                    } else {
+                        let html = `<table class="sub-table"><thead><tr><th>Recipient</th><th>Time</th><th>Status</th><th>Message ID</th></tr></thead><tbody>`;
+                        logs.forEach(l => {
+                            html += `<tr>
+                                <td>${l.email || l.contact_id}</td>
+                                <td>${new Date(l.sent_at).toLocaleString()}</td>
+                                <td><span class="badge ${l.status === 'sent' ? 'badge-success' : 'badge-danger'}">${l.status}</span></td>
+                                <td><small>${l.message_id || '--'}</small></td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table>`;
+                        container.innerHTML = html;
+                    }
+                } catch(e) { container.innerHTML = 'Failed to load logs.'; }
+            } else {
+                row.style.display = 'none';
             }
         }
-        
-        window.pauseJob = async (id) => { await api.post(`/mail/jobs/${id}/pause`); loadJobs(); }
-        window.resumeJob = async (id) => { await api.post(`/mail/jobs/${id}/resume`); loadJobs(); }
-        window.cancelJob = async (id) => { await api.post(`/mail/jobs/${id}/cancel`); loadJobs(); }
-        
+
+        function changePage(delta) {
+            currentPage = Math.max(1, currentPage + delta);
+            loadJobs();
+        }
+
+        function exportHistory() {
+            window.print(); // Placeholder for actual CSV export logic
+            alert("Exporting current view to CSV...");
+        }
+
         loadJobs();
     </script>
 </body>
