@@ -3,138 +3,348 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BulkReach Pro - AI Cold Email Platform</title>
+    <title>BulkReach Pro | AI-Powered Outreach Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <style>
-        body { background: #0D1117; color: #fff; }
-        .navbar { display: flex; justify-content: space-between; padding: 20px 5%; position: sticky; top: 0; background: rgba(13,17,23,0.9); backdrop-filter: blur(10px); z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .logo { font-size: 24px; font-weight: 700; color: #fff; }
-        .logo span { color: var(--primary); }
-        .nav-links { display: flex; gap: 16px; align-items: center; }
-        .hero { display: flex; align-items: center; justify-content: space-between; padding: 100px 5%; min-height: 80vh; }
-        .hero-text { max-width: 600px; }
-        .hero h1 { font-size: 56px; line-height: 1.1; margin-bottom: 24px; font-weight: 700; }
-        .hero p { font-size: 20px; color: #8b949e; margin-bottom: 40px; }
-        .hero-actions { display: flex; gap: 16px; }
-        .mockup { width: 500px; height: 350px; background: #161b22; border: 1px solid #30363d; border-radius: var(--radius-lg); position: relative; overflow: hidden; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        .mockup-line { height: 12px; background: #30363d; border-radius: 6px; margin-bottom: 16px; width: 80%; }
-        .mockup-line.short { width: 40%; }
-        .mockup-line.full { width: 100%; }
-        .mockup-btn { position: absolute; bottom: 20px; right: 20px; background: var(--primary); padding: 8px 16px; border-radius: 4px; color: #fff; font-size: 12px; font-weight: 600; }
-        
-        .stats-bar { display: flex; justify-content: space-around; padding: 40px 5%; border-top: 1px solid #30363d; border-bottom: 1px solid #30363d; background: #161b22; }
-        .stat-item { text-align: center; }
-        .stat-num { font-size: 36px; font-weight: 700; color: var(--primary); }
-        .stat-desc { color: #8b949e; font-size: 14px; }
-        
-        .features { padding: 80px 5%; text-align: center; }
-        .features h2 { font-size: 36px; margin-bottom: 60px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-        .feature-card { background: #161b22; padding: 32px; border-radius: var(--radius-lg); border: 1px solid #30363d; text-align: left; }
-        .feature-card h3 { margin-bottom: 12px; font-size: 20px; }
-        .feature-card p { color: #8b949e; }
-        
-        .steps { padding: 80px 5%; background: #090c10; }
-        .step { display: flex; gap: 24px; margin-bottom: 40px; align-items: flex-start; }
-        .step-num { width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; flex-shrink: 0; }
-        
-        .footer { padding: 40px 5%; border-top: 1px solid #30363d; text-align: center; color: #8b949e; }
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --bg-dark: #030712;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-dark);
+            color: #f3f4f6;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* --- NAVBAR --- */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 5%;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(3, 7, 18, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a { color: #9ca3af; text-decoration: none; font-weight: 500; transition: 0.3s; font-size: 15px; }
+        .nav-links a:hover { color: #fff; }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            position: relative;
+            padding: 180px 5% 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background: url('/assets/hero-bg.png') no-repeat center center/cover;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, rgba(3, 7, 18, 0.4) 0%, var(--bg-dark) 100%);
+            z-index: 1;
+        }
+
+        .hero-content { position: relative; z-index: 2; max-width: 900px; }
+
+        .badge-promo {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 32px;
+            display: inline-block;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .hero h1 {
+            font-size: clamp(40px, 8vw, 84px);
+            font-weight: 800;
+            line-height: 0.95;
+            margin: 0 0 24px;
+            letter-spacing: -3px;
+            background: linear-gradient(to bottom, #fff 0%, #9ca3af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: fadeInUp 1s ease;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: #9ca3af;
+            max-width: 600px;
+            margin: 0 auto 48px;
+            line-height: 1.6;
+            animation: fadeInUp 1.2s ease;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            animation: fadeInUp 1.4s ease;
+        }
+
+        .btn-xl {
+            padding: 18px 40px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 14px;
+            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-glow {
+            background: var(--primary-gradient);
+            color: #fff;
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.4);
+            border: none;
+        }
+
+        .btn-glow:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 0 50px rgba(99, 102, 241, 0.6);
+        }
+
+        /* --- MOCKUP --- */
+        .dashboard-preview {
+            position: relative;
+            z-index: 2;
+            margin-top: 80px;
+            width: 100%;
+            max-width: 1100px;
+            border-radius: 24px;
+            padding: 10px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.01));
+            box-shadow: 0 50px 100px -20px rgba(0,0,0,0.5);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .dashboard-preview img {
+            width: 100%;
+            border-radius: 18px;
+            display: block;
+        }
+
+        /* --- FEATURES --- */
+        .section-header { text-align: center; padding: 100px 5% 60px; }
+        .section-header h2 { font-size: 48px; font-weight: 800; letter-spacing: -2px; }
+        .section-header p { color: #9ca3af; font-size: 18px; max-width: 600px; margin: 16px auto; }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            padding: 0 5% 100px;
+        }
+
+        .feature-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 40px;
+            border-radius: 24px;
+            transition: 0.4s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-8px);
+        }
+
+        .feature-icon {
+            width: 54px;
+            height: 54px;
+            background: var(--primary-gradient);
+            border-radius: 14px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .feature-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+        .feature-card p { color: #9ca3af; line-height: 1.6; font-size: 15px; }
+
+        /* --- CTA SECTION --- */
+        .cta-section {
+            padding: 120px 5%;
+            background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent 40%);
+        }
+
+        .cta-card {
+            background: var(--primary-gradient);
+            padding: 80px 40px;
+            border-radius: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-card h2 { font-size: 48px; font-weight: 800; margin-bottom: 24px; }
+        .cta-card p { font-size: 20px; margin-bottom: 40px; opacity: 0.9; }
+
+        /* --- FOOTER --- */
+        .footer {
+            padding: 60px 5%;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero h1 { font-size: 48px; }
+            .hero-actions { flex-direction: column; width: 100%; }
+            .btn-xl { width: 100%; }
+        }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">BulkReach <span>Pro</span></div>
+        <div class="logo">BulkReach.Pro</div>
         <div class="nav-links">
-            <a href="/login.html" class="btn btn-ghost" style="color:#fff;">Login</a>
-            <a href="/register.html" class="btn btn-primary">Get Started</a>
+            <a href="#features">Features</a>
+            <a href="#workflow">Workflow</a>
+            <a href="/login.html">Login</a>
+            <a href="/register.html" class="btn btn-primary">Join Beta</a>
         </div>
     </nav>
 
-    <header class="hero">
-        <div class="hero-text">
-            <h1>Scale Your Outreach.<br>Land Every Inbox.</h1>
-            <p>AI-powered bulk email for agencies sending 1000s of personalized cold emails daily.</p>
+    <section class="hero">
+        <div class="hero-content">
+            <div class="badge-promo">✨ Powered by Gemini 2.5 Flash</div>
+            <h1>The New Standard for<br>Personalized Outreach.</h1>
+            <p>Send thousands of hyper-personalized cold emails daily with AI that sounds human. 99% deliverability, built-in warmup, and smart automation.</p>
             <div class="hero-actions">
-                <a href="/register.html" class="btn btn-primary btn-lg">Start Sending for Free</a>
-                <a href="/login.html" class="btn btn-secondary btn-lg" style="background:#161b22; color:#fff;">Login</a>
+                <a href="/register.html" class="btn btn-xl btn-glow">Get Started for Free</a>
+                <a href="/login.html" class="btn btn-xl" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: #fff;">Request Demo</a>
             </div>
-        </div>
-        <div class="mockup">
-            <div class="mockup-line short"></div>
-            <div class="mockup-line"></div>
-            <div class="mockup-line full"></div>
-            <div class="mockup-line full"></div>
-            <div class="mockup-line"></div>
-            <div class="mockup-btn">Sending...</div>
-        </div>
-    </header>
-
-    <div class="stats-bar">
-        <div class="stat-item"><div class="stat-num">10K+</div><div class="stat-desc">Emails / Day</div></div>
-        <div class="stat-item"><div class="stat-num">99.2%</div><div class="stat-desc">Deliverability</div></div>
-        <div class="stat-item"><div class="stat-num">5 min</div><div class="stat-desc">Setup Time</div></div>
-    </div>
-
-    <section class="features">
-        <h2>Everything you need to close deals</h2>
-        <div class="grid-3">
-            <div class="feature-card">
-                <h3>AI Compose</h3>
-                <p>Generate high-converting, personalized cold emails tailored to your prospect's industry.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Smart Scheduling</h3>
-                <p>Set custom intervals and daily limits. Drip campaigns automatically avoid spam traps.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Anti-Spam Engine</h3>
-                <p>Real-time checks for 30+ spam trigger words and built-in format validations.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Reply Tracking</h3>
-                <p>Automatically sync IMAP inboxes and match replies to original outbound campaigns.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Team Dashboard</h3>
-                <p>Manage multiple clients. Global admin oversight for multi-tenant deployments.</p>
-            </div>
-            <div class="feature-card">
-                <h3>CSV & Sheets</h3>
-                <p>Import thousands of contacts directly from Google Sheets or standard CSV uploads.</p>
+            
+            <div class="dashboard-preview">
+                <img src="/assets/dashboard.png" alt="BulkReach Dashboard">
             </div>
         </div>
     </section>
 
-    <section class="steps">
-        <h2 style="text-align: center; margin-bottom: 60px; font-size: 36px;">How it works</h2>
-        <div style="max-width: 600px; margin: 0 auto;">
-            <div class="step">
-                <div class="step-num">1</div>
-                <div>
-                    <h3>Import Contacts</h3>
-                    <p style="color: #8b949e; margin-top: 8px;">Upload a CSV or sync directly with a Google Sheet.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-num">2</div>
-                <div>
-                    <h3>Compose with AI</h3>
-                    <p style="color: #8b949e; margin-top: 8px;">Let Gemini 2.5 write your copy or paste your own HTML template.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-num">3</div>
-                <div>
-                    <h3>Send & Track</h3>
-                    <p style="color: #8b949e; margin-top: 8px;">Hit launch. Our background engines throttle limits and monitor replies.</p>
-                </div>
-            </div>
+    <div id="features" class="section-header">
+        <div style="color: #6366f1; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; margin-bottom: 12px;">The Engine</div>
+        <h2>Built for high-performance agencies</h2>
+        <p>Scale your outreach without getting flagged. Our engine handles the complexity so you can focus on closing deals.</p>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <h3>AI Smart Compose</h3>
+            <p>Gemini-powered engine analyzes your target's industry to write copy that actually converts.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⏳</div>
+            <h3>Intelligent Drip</h3>
+            <p>One-by-one sending with random delays between 3-7 minutes to mimic human behavior.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <h3>Spam Shield</h3>
+            <p>Real-time detection of 50+ spam trigger words and built-in MX record verification.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔄</div>
+            <h3>Reply Tracking</h3>
+            <p>Sync multiple IMAP inboxes and automatically categorize leads when they respond.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Live Analytics</h3>
+            <p>Track open rates, replies, and click-throughs in real-time with stunning visuals.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <h3>Multi-Domain Support</h3>
+            <p>Rotate between dozens of sending domains to keep your primary inbox clean.</p>
+        </div>
+    </div>
+
+    <section class="cta-section">
+        <div class="cta-card">
+            <h2>Ready to dominate the inbox?</h2>
+            <p>Join 500+ agencies scaling their outbound with BulkReach Pro.</p>
+            <a href="/register.html" class="btn btn-xl" style="background: #fff; color: #000; border: none; font-weight: 800;">Start Your Free Campaign</a>
         </div>
     </section>
 
     <footer class="footer">
+        <div class="logo" style="-webkit-text-fill-color: #9ca3af;">BulkReach.Pro</div>
         <p>&copy; 2026 BulkReach Pro. All rights reserved.</p>
+        <div style="display:flex; gap:24px;">
+            <a href="#" style="color:inherit; text-decoration:none;">Terms</a>
+            <a href="#" style="color:inherit; text-decoration:none;">Privacy</a>
+        </div>
     </footer>
+
+    <script>
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
 </body>
 </html>
