@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .admin-sidebar-badge { background: var(--admin-accent); color: #000; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: auto; }
+        .admin-chart-container { height: 250px; width: 100%; position: relative; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); padding-left: 8px; padding-bottom: 8px; margin-top: 16px; display:flex; align-items:flex-end; gap: 4px; }
+        .admin-bar { background: var(--admin-accent); width: 100%; min-height: 2px; transition: height 0.3s; border-radius: 2px 2px 0 0; }
+        .admin-bar-label { font-size: 10px; color: var(--text-muted); position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); }
+        .admin-bar-container { flex:1; height: 100%; position: relative; display: flex; align-items: flex-end; }
+        .admin-bar-val { font-size: 10px; position:absolute; top: -16px; left:50%; transform: translateX(-50%); color:var(--text-secondary); opacity:0; transition:opacity 0.2s; }
+        .admin-bar-container:hover .admin-bar-val { opacity:1; }
+    </style>
+</head>
+<body class="admin-mode">
+    <div class="dashboard-layout">
+        <aside class="sidebar" style="background:var(--bg-sidebar);">
+            <div class="sidebar-logo" style="color:var(--text-primary)">
+                BulkReach <span class="admin-sidebar-badge">ADMIN PANEL</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/admin.html" class="sidebar-nav-item active">Overview</a>
+                <a href="/pages/admin-users.html" class="sidebar-nav-item">Users</a>
+                <a href="/pages/admin-jobs.html" class="sidebar-nav-item">All Jobs</a>
+                <a href="/pages/admin-logs.html" class="sidebar-nav-item">All Logs</a>
+                <a href="/pages/admin-credentials.html" class="sidebar-nav-item">Credentials</a>
+                <a href="/pages/admin-live.html" class="sidebar-nav-item" style="color:var(--danger)">Live Monitor <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--danger); margin-left:8px; animation: pulse 2s infinite;"></span></a>
+                
+                <div style="margin:16px 12px 8px; font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Standard</div>
+                <a href="/dashboard.html" class="sidebar-nav-item">User Dashboard</a>
+            </nav>
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="userAvatar" style="background:var(--admin-accent); color:#000">A</div>
+                <div class="sidebar-user-info">
+                    <span class="sidebar-user-name" id="userName">Admin</span>
+                    <span class="sidebar-user-role" id="userRole" style="color:var(--admin-accent)">admin</span>
+                </div>
+                <a href="#" id="logoutBtn" style="color:var(--danger); margin-left:auto; cursor:pointer;" title="Logout">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <div style="font-size:12px; font-weight:600; color:var(--admin-accent); margin-bottom:4px;">ADMIN &bull; OVERVIEW</div>
+                    <h1 class="page-title">System Status</h1>
+                </div>
+            </header>
+
+            <div class="stats-grid" id="statsGrid" style="grid-template-columns: repeat(6, 1fr);">
+                <div class="stat-card"><div class="lbl">Total Users</div><div class="val" id="statUsers">...</div></div>
+                <div class="stat-card"><div class="lbl">Active Users</div><div class="val" id="statActive">...</div></div>
+                <div class="stat-card"><div class="lbl">Emails Today</div><div class="val" id="statEmails">...</div></div>
+                <div class="stat-card"><div class="lbl">Running Jobs</div><div class="val" id="statJobs">...</div></div>
+                <div class="stat-card"><div class="lbl">Failed 24h</div><div class="val" id="statFailed">...</div></div>
+                <div class="stat-card"><div class="lbl">Replies Today</div><div class="val" id="statReplies">...</div></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                <div class="card">
+                    <h3 style="margin-bottom: 16px;">Emails Per Hour (Last 24h)</h3>
+                    <div class="admin-chart-container" id="hourlyChart">
+                        <!-- Bars injected via JS -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom: 16px;">Top Active Users</h3>
+                    <div class="table-container">
+                        <table class="table" id="topUsersTable">
+                            <thead><tr><th>User</th><th>Sent Today</th></tr></thead>
+                            <tbody id="topUsersBody">
+                                <tr><td colspan="2" style="text-align:center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <h3 style="margin-bottom: 16px; margin-top:24px;">System Health</h3>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:var(--bg-secondary); border-radius:var(--radius-sm)">
+                            <span style="font-size:14px; font-weight:500;">MongoDB</span>
+                            <span class="badge badge-success">Online (ping 12ms)</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:var(--bg-secondary); border-radius:var(--radius-sm)">
+                            <span style="font-size:14px; font-weight:500;">APScheduler</span>
+                            <span class="badge badge-success">Running</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAdmin();
+        
+        async function loadAdminDashboard() {
+            try {
+                const payload = api.getTokenPayload();
+                document.getElementById('userName').textContent = payload.sub.substring(0,8);
+
+                document.getElementById('logoutBtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    api.clearTokens();
+                    window.location.href = '/login.html';
+                });
+
+                const stats = await api.get('/admin/stats');
+                document.getElementById('statUsers').textContent = stats.total_users || 0;
+                document.getElementById('statActive').textContent = stats.active_users || 0;
+                document.getElementById('statEmails').textContent = stats.emails_today || 0;
+                document.getElementById('statJobs').textContent = stats.running_jobs || 0;
+                document.getElementById('statFailed').textContent = stats.failed_24h || 0;
+                document.getElementById('statReplies').textContent = stats.replies_today || 0;
+
+                const tBody = document.getElementById('topUsersBody');
+                tBody.innerHTML = '';
+                if(!stats.top_users || stats.top_users.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="2" style="text-align:center">No active users today.</td></tr>';
+                } else {
+                    stats.top_users.slice(0,5).forEach(u => {
+                        tBody.innerHTML += `<tr>
+                            <td><div style="font-weight:500">${u.name}</div><div style="font-size:12px;color:var(--text-muted)">${u.email}</div></td>
+                            <td style="font-weight:600; color:var(--admin-accent)">${u.sent_today}</td>
+                        </tr>`;
+                    });
+                }
+
+                const chart = document.getElementById('hourlyChart');
+                chart.innerHTML = '';
+                const hourly = stats.emails_per_hour_last_24h || Array(24).fill(0);
+                const maxVal = Math.max(...hourly, 10);
+                
+                hourly.forEach((val, i) => {
+                    const heightPct = (val / maxVal) * 100;
+                    const hourLabel = (new Date().getHours() - 23 + i + 24) % 24;
+                    chart.innerHTML += `
+                    <div class="admin-bar-container">
+                        <div class="admin-bar" style="height: ${heightPct}%"></div>
+                        <div class="admin-bar-val">${val}</div>
+                        ${i % 4 === 0 ? `<div class="admin-bar-label">${hourLabel}:00</div>` : ''}
+                    </div>`;
+                });
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        
+        loadAdminDashboard();
+    </script>
+</body>
+</html>

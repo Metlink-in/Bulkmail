@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item active">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Profile Settings</h1>
+            </header>
+
+            <div class="card" style="max-width: 600px;">
+                <form id="profileForm">
+                    <div class="input-group">
+                        <label class="input-label">Name</label>
+                        <input type="text" id="pName" class="input">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Organization</label>
+                        <input type="text" id="pOrg" class="input">
+                    </div>
+                    <hr style="margin:24px 0; border:0; border-top:1px solid var(--border)">
+                    <h3>Change Password</h3>
+                    <div class="input-group" style="margin-top:16px;">
+                        <label class="input-label">Current Password</label>
+                        <input type="password" id="pCurr" class="input">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">New Password</label>
+                        <input type="password" id="pNew" class="input">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save Profile</button>
+                    <div id="pMsg" style="margin-top:16px; font-size:14px;"></div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        async function loadProfile() {
+            try {
+                const p = await api.get('/user/profile');
+                document.getElementById('pName').value = p.name;
+                document.getElementById('pOrg').value = p.org_name || "";
+            } catch (err) { console.error(err); }
+        }
+        
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('pName').value,
+                org_name: document.getElementById('pOrg').value
+            };
+            const curr = document.getElementById('pCurr').value;
+            const newP = document.getElementById('pNew').value;
+            if(curr && newP) {
+                payload.current_password = curr;
+                payload.new_password = newP;
+            }
+            
+            const msg = document.getElementById('pMsg');
+            try {
+                await api.put('/user/profile', payload);
+                msg.textContent = "Profile updated successfully!";
+                msg.style.color = "var(--success)";
+                document.getElementById('pCurr').value = "";
+                document.getElementById('pNew').value = "";
+            } catch (err) {
+                msg.textContent = err.message;
+                msg.style.color = "var(--danger)";
+            }
+        });
+        
+        loadProfile();
+    </script>
+</body>
+</html>

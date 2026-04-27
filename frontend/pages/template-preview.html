@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Templates - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item active">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Templates</h1>
+                <div class="page-header-actions">
+                    <button class="btn btn-primary" onclick="openTemplateModal()">New Template</button>
+                </div>
+            </header>
+
+            <div class="grid-3" id="templateGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:24px;">
+                <!-- Loaded dynamically -->
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        async function loadTemplates() {
+            try {
+                const grid = document.getElementById('templateGrid');
+                grid.innerHTML = 'Loading...';
+                const templates = await api.get('/template');
+                grid.innerHTML = '';
+                
+                if(templates.length === 0) {
+                    grid.innerHTML = 'No templates found.';
+                    return;
+                }
+                
+                templates.forEach(t => {
+                    grid.innerHTML += `<div class="card">
+                        <h3 style="margin-bottom:8px;">${t.name}</h3>
+                        <p style="font-size:14px; color:var(--text-secondary); margin-bottom:8px;">${t.subject}</p>
+                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">${t.preview_text.substring(0,80)}...</p>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTemplate('${t.id}')">Delete</button>
+                        <button class="btn btn-sm btn-secondary" onclick="duplicateTemplate('${t.id}')">Duplicate</button>
+                    </div>`;
+                });
+            } catch (err) { console.error(err); }
+        }
+        
+        window.deleteTemplate = async (id) => { if(confirm("Delete?")) { await api.delete(`/template/${id}`); loadTemplates(); } }
+        window.duplicateTemplate = async (id) => { await api.post(`/template/${id}/duplicate`); loadTemplates(); }
+        
+        window.openTemplateModal = async () => {
+            const name = prompt("Template Name:");
+            const sub = prompt("Subject:");
+            if(name && sub) {
+                await api.post('/template', { name, subject: sub, html_body: "<p>Hello {first_name}</p>" });
+                loadTemplates();
+            }
+        };
+
+        loadTemplates();
+    </script>
+</body>
+</html>

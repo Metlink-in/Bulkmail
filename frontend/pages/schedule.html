@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedules - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item active">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Schedules</h1>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Cron / Next Run</th>
+                                <th>Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleBody">
+                            <tr><td colspan="5" style="text-align:center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        async function loadSchedules() {
+            try {
+                const s = await api.get('/schedule');
+                const tBody = document.getElementById('scheduleBody');
+                tBody.innerHTML = '';
+                if(s.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="5" style="text-align:center">No active schedules.</td></tr>';
+                    return;
+                }
+                
+                s.forEach(j => {
+                    tBody.innerHTML += `<tr>
+                        <td>${j.name}</td>
+                        <td>${j.recurrence_type}</td>
+                        <td>${j.cron_expression || j.next_run}</td>
+                        <td>${j.is_active ? 'Yes' : 'No'}</td>
+                        <td>
+                            <button onclick="togglePause('${j._id}', ${j.is_active})" class="btn btn-sm btn-secondary">${j.is_active ? 'Pause' : 'Resume'}</button>
+                            <button onclick="delSchedule('${j._id}')" class="btn btn-sm btn-danger">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+            } catch (err) { console.error(err); }
+        }
+        
+        window.togglePause = async (id, isActive) => { await api.post(`/schedule/${id}/${isActive ? 'pause' : 'resume'}`); loadSchedules(); }
+        window.delSchedule = async (id) => { if(confirm("Delete?")) { await api.delete(`/schedule/${id}`); loadSchedules(); } }
+        
+        loadSchedules();
+    </script>
+</body>
+</html>

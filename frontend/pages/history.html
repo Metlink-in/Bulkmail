@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item active">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Campaign History</h1>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Job ID</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobsBody">
+                            <tr><td colspan="4" style="text-align:center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        async function loadJobs() {
+            try {
+                const jobs = await api.get('/mail/jobs');
+                const tBody = document.getElementById('jobsBody');
+                tBody.innerHTML = '';
+                if(jobs.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="4" style="text-align:center">No campaigns found.</td></tr>';
+                    return;
+                }
+                
+                jobs.forEach(j => {
+                    let btnHtml = '';
+                    if(j.status === 'running' || j.status === 'queued') {
+                        btnHtml = `<button onclick="pauseJob('${j._id}')" class="btn btn-sm btn-warning">Pause</button>`;
+                    } else if (j.status === 'paused') {
+                        btnHtml = `<button onclick="resumeJob('${j._id}')" class="btn btn-sm btn-success">Resume</button>`;
+                    }
+                    if(j.status !== 'completed' && j.status !== 'cancelled') {
+                        btnHtml += ` <button onclick="cancelJob('${j._id}')" class="btn btn-sm btn-danger">Cancel</button>`;
+                    }
+                    
+                    tBody.innerHTML += `<tr>
+                        <td>${j._id.substring(0,8)}</td>
+                        <td><span class="badge badge-neutral">${j.status}</span></td>
+                        <td>${new Date(j.created_at).toLocaleString()}</td>
+                        <td>${btnHtml}</td>
+                    </tr>`;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        
+        window.pauseJob = async (id) => { await api.post(`/mail/jobs/${id}/pause`); loadJobs(); }
+        window.resumeJob = async (id) => { await api.post(`/mail/jobs/${id}/resume`); loadJobs(); }
+        window.cancelJob = async (id) => { await api.post(`/mail/jobs/${id}/cancel`); loadJobs(); }
+        
+        loadJobs();
+    </script>
+</body>
+</html>

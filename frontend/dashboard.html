@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                BulkReach
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item active">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies <span id="unreadBadge" class="badge badge-info" style="margin-left:auto">0</span></a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="userAvatar">U</div>
+                <div class="sidebar-user-info">
+                    <span class="sidebar-user-name" id="userName">User</span>
+                    <span class="sidebar-user-role" id="userRole">user</span>
+                </div>
+                <a href="#" id="logoutBtn" style="color:var(--danger); margin-left:auto; cursor:pointer;" title="Logout">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Welcome back, <span id="welcomeName">User</span></h1>
+                <div class="page-header-actions">
+                    <a href="/pages/bulk-mail.html" class="btn btn-primary">New Campaign</a>
+                    <a href="/pages/contacts.html" class="btn btn-secondary">Import Contacts</a>
+                </div>
+            </header>
+
+            <div class="stats-grid" id="statsGrid">
+                <!-- Skeleton or Values -->
+                <div class="stat-card"><div class="lbl">Total Sent</div><div class="val" id="statSent">...</div></div>
+                <div class="stat-card"><div class="lbl">Sent Today</div><div class="val" id="statToday">...</div></div>
+                <div class="stat-card"><div class="lbl">Active Schedules</div><div class="val" id="statSchedules">...</div></div>
+                <div class="stat-card"><div class="lbl">In Queue</div><div class="val" id="statQueue">...</div></div>
+                <div class="stat-card"><div class="lbl">Reply Rate</div><div class="val" id="statReply">...</div></div>
+                <div class="stat-card"><div class="lbl">Failed Sends</div><div class="val" id="statFailed">...</div></div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3 style="margin-bottom: 16px;">Recent Campaigns</h3>
+                    <div class="table-container">
+                        <table class="table" id="campaignsTable">
+                            <thead><tr><th>ID</th><th>Status</th><th>Created</th></tr></thead>
+                            <tbody id="campaignsBody">
+                                <tr><td colspan="3" style="text-align:center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom: 16px;">Recent Activity</h3>
+                    <div id="activityFeed" style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        async function loadDashboard() {
+            try {
+                // Load User Info
+                const payload = api.getTokenPayload();
+                document.getElementById('userName').textContent = payload.sub.substring(0,6) || "User";
+                document.getElementById('welcomeName').textContent = payload.sub.substring(0,6) || "User";
+                document.getElementById('userRole').textContent = payload.role;
+
+                // Logout
+                document.getElementById('logoutBtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    api.clearTokens();
+                    window.location.href = '/login.html';
+                });
+
+                // Load Stats
+                const stats = await api.get('/user/stats');
+                document.getElementById('statSent').textContent = stats.total_sent_all_time;
+                document.getElementById('statToday').textContent = stats.sent_today;
+                document.getElementById('statSchedules').textContent = stats.active_schedules;
+                document.getElementById('statQueue').textContent = stats.queued_jobs;
+                document.getElementById('statReply').textContent = stats.reply_rate_percent + "%";
+                document.getElementById('statFailed').textContent = stats.failed_last_7_days;
+
+                // Load Campaigns
+                const jobs = await api.get('/mail/jobs?limit=5');
+                const tBody = document.getElementById('campaignsBody');
+                tBody.innerHTML = '';
+                if(jobs.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="3" style="text-align:center">No campaigns yet.</td></tr>';
+                } else {
+                    jobs.forEach(j => {
+                        let badgeClass = 'badge-neutral';
+                        if(j.status === 'completed') badgeClass = 'badge-success';
+                        if(j.status === 'failed') badgeClass = 'badge-danger';
+                        if(j.status === 'running') badgeClass = 'badge-info';
+                        tBody.innerHTML += `<tr>
+                            <td>${j._id.substring(0,8)}</td>
+                            <td><span class="badge ${badgeClass}">${j.status}</span></td>
+                            <td>${new Date(j.created_at).toLocaleDateString()}</td>
+                        </tr>`;
+                    });
+                }
+
+                // Load Activity
+                const activities = await api.get('/user/activity');
+                const aFeed = document.getElementById('activityFeed');
+                aFeed.innerHTML = '';
+                if(activities.length === 0) {
+                    aFeed.innerHTML = 'No recent activity.';
+                } else {
+                    activities.slice(0,5).forEach(a => {
+                        aFeed.innerHTML += `<div style="border-bottom:1px solid var(--border); padding-bottom:8px;">
+                            <strong>${a.action}</strong>
+                            <div style="color:var(--text-secondary); font-size:12px;">${new Date(a.timestamp).toLocaleString()}</div>
+                        </div>`;
+                    });
+                }
+
+                // Unread Badge
+                const unread = await api.get('/replies/unread-count');
+                document.getElementById('unreadBadge').textContent = unread.count;
+                if(unread.count === 0) document.getElementById('unreadBadge').style.display = 'none';
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        
+        loadDashboard();
+    </script>
+</body>
+</html>

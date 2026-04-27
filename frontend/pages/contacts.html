@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacts - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item active">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Contacts</h1>
+                <div class="page-header-actions">
+                    <button class="btn btn-secondary" onclick="document.getElementById('csvUpload').click()">Upload CSV</button>
+                    <input type="file" id="csvUpload" style="display:none" accept=".csv">
+                </div>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Total Contacts</th>
+                                <th>Source</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listsBody">
+                            <tr><td colspan="5" style="text-align:center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        async function loadLists() {
+            try {
+                const lists = await api.get('/contacts/lists');
+                const tBody = document.getElementById('listsBody');
+                tBody.innerHTML = '';
+                if(lists.items.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="5" style="text-align:center">No contact lists found.</td></tr>';
+                    return;
+                }
+                
+                lists.items.forEach(l => {
+                    tBody.innerHTML += `<tr>
+                        <td>${l.name}</td>
+                        <td>${l.total_contacts}</td>
+                        <td><span class="badge badge-neutral">${l.source}</span></td>
+                        <td>${new Date(l.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button onclick="deleteList('${l.id}')" class="btn btn-sm btn-danger">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        
+        window.deleteList = async (id) => { if(confirm("Delete list and all contacts?")) { await api.delete(`/contacts/lists/${id}`); loadLists(); } }
+        
+        document.getElementById('csvUpload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("list_name", "CSV Import " + new Date().toLocaleTimeString());
+            
+            try {
+                await api.upload('/contacts/import/csv', formData);
+                alert("Import successful");
+                loadLists();
+            } catch (err) { alert(err.message); }
+        });
+
+        loadLists();
+    </script>
+</body>
+</html>

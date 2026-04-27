@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Mail - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .tabs { margin-bottom: 20px; }
+        .section-pane { display: none; }
+        .section-pane.active { display: block; }
+        
+        .editor-toolbar { padding: 8px; border: 1px solid var(--border); border-bottom: none; background: var(--bg-secondary); border-radius: var(--radius-md) var(--radius-md) 0 0; display:flex; gap:8px;}
+        .editor-content { min-height: 300px; padding: 16px; border: 1px solid var(--border); border-radius: 0 0 var(--radius-md) var(--radius-md); background: #fff; outline: none; }
+        
+        .ai-drawer { border-left: 1px solid var(--border); padding-left: 24px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item active">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">New Campaign</h1>
+            </header>
+
+            <div class="tabs" id="campaignTabs">
+                <div class="tab-item active" data-target="compose">Compose</div>
+                <div class="tab-item" data-target="contacts">Recipients</div>
+                <div class="tab-item" data-target="schedule">Schedule & Send</div>
+            </div>
+
+            <div id="compose" class="section-pane active">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                    <div>
+                        <div class="input-group">
+                            <label class="input-label">Subject</label>
+                            <input type="text" id="subject" class="input" placeholder="Email Subject">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Body</label>
+                            <div class="editor-toolbar">
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="document.execCommand('bold',false,null)">B</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="document.execCommand('italic',false,null)">I</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onclick="document.execCommand('underline',false,null)">U</button>
+                            </div>
+                            <div id="htmlBody" class="editor-content" contenteditable="true"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <div>Chars: <span id="charCount">0</span></div>
+                            <button id="saveTemplateBtn" class="btn btn-secondary">Save as Template</button>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-drawer">
+                        <h3>AI Compose</h3>
+                        <div class="input-group" style="margin-top:16px;">
+                            <label class="input-label">Goal</label>
+                            <textarea id="aiGoal" class="input" rows="2">Book a demo</textarea>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Industry</label>
+                            <input type="text" id="aiIndustry" class="input" value="SaaS">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Tone</label>
+                            <select id="aiTone" class="input">
+                                <option value="professional">Professional</option>
+                                <option value="casual">Casual</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Sender Name</label>
+                            <input type="text" id="aiSender" class="input" value="John">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Sender Company</label>
+                            <input type="text" id="aiCompany" class="input" value="Acme Corp">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Value Prop</label>
+                            <textarea id="aiValue" class="input" rows="2">We help you save 20 hours a week</textarea>
+                        </div>
+                        <button id="aiGenerateBtn" class="btn btn-primary" style="width:100%">Generate Email</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="contacts" class="section-pane">
+                <div class="card">
+                    <div class="input-group">
+                        <label class="input-label">Select Saved List</label>
+                        <select id="contactListSelect" class="input">
+                            <option value="">-- Select a List --</option>
+                        </select>
+                    </div>
+                    <p style="text-align:center; margin: 16px 0;">OR</p>
+                    <div class="input-group">
+                        <label class="input-label">Provide Contact IDs (comma separated)</label>
+                        <input type="text" id="manualContactIds" class="input" placeholder="uuid1, uuid2">
+                    </div>
+                </div>
+            </div>
+
+            <div id="schedule" class="section-pane">
+                <div class="card">
+                    <div class="input-group">
+                        <label class="input-label">Schedule At</label>
+                        <input type="datetime-local" id="scheduleAt" class="input">
+                        <small style="color:var(--text-secondary)">Leave blank to send immediately</small>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Delay Between Emails (seconds)</label>
+                        <input type="number" id="intervalSeconds" class="input" value="300" min="60">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Daily Limit</label>
+                        <input type="number" id="dailyLimit" class="input" value="500">
+                    </div>
+                    
+                    <button id="startCampaignBtn" class="btn btn-primary btn-lg" style="margin-top:24px; width:100%">Start Campaign</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+    
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        function showToast(msg, type="success") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section-pane').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.target).classList.add('active');
+            });
+        });
+
+        document.getElementById('aiGenerateBtn').addEventListener('click', async (e) => {
+            const btn = e.target;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner spinner-sm"></span> Generating...';
+            try {
+                const body = {
+                    goal: document.getElementById('aiGoal').value,
+                    industry: document.getElementById('aiIndustry').value,
+                    tone: document.getElementById('aiTone').value,
+                    sender_name: document.getElementById('aiSender').value,
+                    sender_company: document.getElementById('aiCompany').value,
+                    value_prop: document.getElementById('aiValue').value,
+                    recipient_name: "{first_name}"
+                };
+                const res = await api.post('/ai/compose', body);
+                document.getElementById('subject').value = res.subject;
+                document.getElementById('htmlBody').innerHTML = res.html_body;
+                showToast("Email generated successfully");
+            } catch (err) {
+                showToast(err.message, "danger");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Email';
+            }
+        });
+
+        document.getElementById('saveTemplateBtn').addEventListener('click', async () => {
+            const subject = document.getElementById('subject').value;
+            const htmlBody = document.getElementById('htmlBody').innerHTML;
+            if(!subject || !htmlBody) return showToast("Subject and body required", "warning");
+            
+            try {
+                const res = await api.post('/template', { name: "Saved Template " + new Date().toLocaleTimeString(), subject, html_body: htmlBody });
+                showToast("Template saved!", "success");
+                window.currentTemplateId = res.id;
+            } catch (err) {
+                showToast("Failed to save template", "danger");
+            }
+        });
+
+        document.getElementById('startCampaignBtn').addEventListener('click', async (e) => {
+            const btn = e.target;
+            
+            let tId = window.currentTemplateId;
+            if(!tId) {
+                try {
+                    const res = await api.post('/template', { 
+                        name: "Auto Template " + Date.now(), 
+                        subject: document.getElementById('subject').value, 
+                        html_body: document.getElementById('htmlBody').innerHTML 
+                    });
+                    tId = res.id;
+                } catch(err) {
+                    return showToast("Failed to create template", "danger");
+                }
+            }
+            
+            btn.disabled = true;
+            btn.textContent = "Starting...";
+            
+            const payload = {
+                template_id: tId,
+                contact_list_id: document.getElementById('contactListSelect').value || null,
+                interval_seconds: parseInt(document.getElementById('intervalSeconds').value) || 300,
+                daily_limit: parseInt(document.getElementById('dailyLimit').value) || 500,
+            };
+            
+            const scheduleVal = document.getElementById('scheduleAt').value;
+            if(scheduleVal) payload.schedule_at = new Date(scheduleVal).toISOString();
+            
+            const manualIds = document.getElementById('manualContactIds').value;
+            if(manualIds) payload.contact_ids = manualIds.split(',').map(s=>s.trim()).filter(s=>s);
+            
+            try {
+                const res = await api.post('/mail/jobs', payload);
+                showToast("Campaign queued! Job ID: " + res.job_id, "success");
+                setTimeout(() => window.location.href = "/dashboard.html", 1500);
+            } catch (err) {
+                showToast(err.message, "danger");
+                btn.disabled = false;
+                btn.textContent = "Start Campaign";
+            }
+        });
+
+        async function loadData() {
+            try {
+                const lists = await api.get('/contacts/lists');
+                const sel = document.getElementById('contactListSelect');
+                lists.items.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l.id;
+                    opt.textContent = `${l.name} (${l.total_contacts} contacts)`;
+                    sel.appendChild(opt);
+                });
+            } catch(err) {}
+        }
+        loadData();
+    </script>
+</body>
+</html>

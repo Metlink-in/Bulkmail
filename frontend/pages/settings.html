@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item active">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Global Settings</h1>
+            </header>
+
+            <div class="card" style="max-width: 600px;">
+                <form id="settingsForm">
+                    <h3>SMTP Settings (Sending)</h3>
+                    <div class="input-group" style="margin-top:16px">
+                        <label class="input-label">Host</label>
+                        <input type="text" id="sHost" class="input">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Port</label>
+                        <input type="number" id="sPort" class="input" value="465">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Username (Email)</label>
+                        <input type="email" id="sUser" class="input">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Password</label>
+                        <input type="password" id="sPass" class="input">
+                    </div>
+                    
+                    <hr style="margin:24px 0; border:0; border-top:1px solid var(--border)">
+                    <h3>IMAP Settings (Replies)</h3>
+                    <div class="input-group" style="margin-top:16px">
+                        <label class="input-label">Host</label>
+                        <input type="text" id="iHost" class="input">
+                    </div>
+                    
+                    <hr style="margin:24px 0; border:0; border-top:1px solid var(--border)">
+                    <h3>AI & API</h3>
+                    <div class="input-group" style="margin-top:16px">
+                        <label class="input-label">Gemini API Key</label>
+                        <input type="password" id="gKey" class="input">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save Settings</button>
+                    <div id="sMsg" style="margin-top:16px; font-size:14px;"></div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        async function loadSettings() {
+            try {
+                const s = await api.get('/settings');
+                document.getElementById('sHost').value = s.smtp_host || "";
+                document.getElementById('sPort').value = s.smtp_port || 465;
+                document.getElementById('sUser').value = s.smtp_user || "";
+                document.getElementById('iHost').value = s.imap_host || "";
+                // Passwords intentionally left blank to not overwrite with "••••" if we submit
+            } catch (err) { console.error(err); }
+        }
+        
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                smtp_host: document.getElementById('sHost').value,
+                smtp_port: parseInt(document.getElementById('sPort').value),
+                smtp_user: document.getElementById('sUser').value,
+                imap_host: document.getElementById('iHost').value,
+            };
+            
+            const sp = document.getElementById('sPass').value;
+            if(sp) payload.smtp_password = sp;
+            
+            const gk = document.getElementById('gKey').value;
+            if(gk) payload.gemini_api_key = gk;
+            
+            const msg = document.getElementById('sMsg');
+            try {
+                await api.post('/settings', payload);
+                msg.textContent = "Settings saved successfully!";
+                msg.style.color = "var(--success)";
+            } catch (err) {
+                msg.textContent = err.message;
+                msg.style.color = "var(--danger)";
+            }
+        });
+        
+        loadSettings();
+    </script>
+</body>
+</html>

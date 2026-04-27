@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-secondary); padding: 20px 0; }
+        .auth-card { width: 100%; max-width: 440px; padding: 40px; background: var(--bg-primary); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+        .logo { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 32px; color: var(--text-primary); }
+        .logo span { color: var(--primary); }
+        .alert-error { background: rgba(239,68,68,0.1); color: var(--danger); padding: 12px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 16px; display: none; }
+        .auth-footer { text-align: center; margin-top: 24px; font-size: 14px; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo">BulkReach <span>Pro</span></div>
+        <div id="errorMsg" class="alert-error"></div>
+        <form id="registerForm">
+            <div class="input-group">
+                <label class="input-label">Full Name</label>
+                <input type="text" id="name" class="input" required autofocus>
+            </div>
+            <div class="input-group">
+                <label class="input-label">Email address</label>
+                <input type="email" id="email" class="input" required>
+            </div>
+            <div class="input-group">
+                <label class="input-label">Organization Name (Optional)</label>
+                <input type="text" id="org_name" class="input">
+            </div>
+            <div class="input-group">
+                <label class="input-label" style="display:flex; justify-content:space-between;">
+                    Password <span id="passwordStrength" style="font-size:12px; font-weight:400;"></span>
+                </label>
+                <input type="password" id="password" class="input" required minlength="8">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Confirm Password</label>
+                <input type="password" id="passwordConfirm" class="input" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:8px;">Create Account</button>
+        </form>
+        <div class="auth-footer">
+            Already have an account? <a href="/login.html">Sign in</a>
+        </div>
+    </div>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+</body>
+</html>

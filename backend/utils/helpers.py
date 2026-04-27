@@ -1,0 +1,44 @@
+import secrets
+import string
+import bleach
+import re
+from datetime import datetime, timezone
+from passlib.context import CryptContext
+from cryptography.fernet import Fernet
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def generate_token(length: int = 32) -> str:
+    alphabet = string.ascii_letters + string.digits + "-_"
+    return ''.join(secrets.choice(alphabet) for i in range(length))
+
+def get_current_timestamp() -> datetime:
+    return datetime.now(timezone.utc)
+
+def hash_password(plain: str) -> str:
+    return pwd_context.hash(plain)
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
+
+def encrypt_secret(value: str, key: str) -> str:
+    f = Fernet(key)
+    return f.encrypt(value.encode()).decode()
+
+def decrypt_secret(encrypted: str, key: str) -> str:
+    f = Fernet(key)
+    return f.decrypt(encrypted.encode()).decode()
+
+def sanitize_html(html: str) -> str:
+    allowed_tags = ['p', 'br', 'b', 'i', 'u', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'a', 'img',
+                    'span', 'div', 'strong', 'em', 'table', 'tr', 'td', 'th', 'thead', 'tbody']
+    allowed_attributes = {
+        '*': ['class', 'style'],
+        'a': ['href', 'target', 'title'],
+        'img': ['src', 'alt', 'width', 'height']
+    }
+    return bleach.clean(html, tags=allowed_tags, attributes=allowed_attributes)
+
+def validate_email_format(email: str) -> bool:
+    pattern = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+    return bool(re.match(pattern, email))

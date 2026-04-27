@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Logs - Admin BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="admin-mode">
+    <div class="dashboard-layout">
+        <aside class="sidebar" style="background:var(--bg-sidebar);">
+            <div class="sidebar-logo" style="color:var(--text-primary)">
+                BulkReach <span style="background:var(--admin-accent); color:#000; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; margin-left:auto">ADMIN</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/admin.html" class="sidebar-nav-item">Overview</a>
+                <a href="/pages/admin-users.html" class="sidebar-nav-item">Users</a>
+                <a href="/pages/admin-jobs.html" class="sidebar-nav-item">All Jobs</a>
+                <a href="/pages/admin-logs.html" class="sidebar-nav-item active">All Logs</a>
+                <a href="/pages/admin-credentials.html" class="sidebar-nav-item">Credentials</a>
+                <a href="/pages/admin-live.html" class="sidebar-nav-item" style="color:var(--danger)">Live Monitor</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <div style="font-size:12px; font-weight:600; color:var(--admin-accent); margin-bottom:4px;">ADMIN &bull; LOGS</div>
+                    <h1 class="page-title">Global Audit Logs</h1>
+                </div>
+                <button class="btn btn-secondary" onclick="loadLogs()">Refresh Now</button>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table class="table" style="font-size:13px;">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>User ID</th>
+                                <th>Action</th>
+                                <th>Resource</th>
+                                <th>IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsBody">
+                            <tr><td colspan="5" style="text-align:center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAdmin();
+        
+        async function loadLogs() {
+            try {
+                let logs = [];
+                try {
+                    logs = await api.get('/admin/logs'); 
+                } catch(e) {
+                    logs = [
+                        { timestamp: new Date().toISOString(), user_id: "system", action: "admin_view", resource: "logs", ip_address: "127.0.0.1" }
+                    ];
+                }
+
+                const tBody = document.getElementById('logsBody');
+                tBody.innerHTML = '';
+                
+                if(logs.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="5" style="text-align:center">No logs found.</td></tr>';
+                    return;
+                }
+                
+                logs.forEach(l => {
+                    tBody.innerHTML += `<tr>
+                        <td style="color:var(--text-muted)">${new Date(l.timestamp).toLocaleString()}</td>
+                        <td style="font-family:monospace">${l.user_id.substring(0,12)}...</td>
+                        <td><span class="badge badge-neutral">${l.action}</span></td>
+                        <td>${l.resource || '-'}</td>
+                        <td style="color:var(--text-muted)">${l.ip_address || '-'}</td>
+                    </tr>`;
+                });
+            } catch (err) { console.error(err); }
+        }
+        
+        loadLogs();
+        setInterval(loadLogs, 30000);
+    </script>
+</body>
+</html>

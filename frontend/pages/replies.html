@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Replies - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">BulkReach Pro</div>
+            <nav class="sidebar-nav">
+                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+                <a href="/pages/template-preview.html" class="sidebar-nav-item">Templates</a>
+                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+                <a href="/pages/replies.html" class="sidebar-nav-item active">Replies</a>
+                <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h1 class="page-title">Inbox Replies</h1>
+                <div class="page-header-actions">
+                    <button class="btn btn-secondary" onclick="syncIMAP()">Sync Now</button>
+                    <button class="btn btn-ghost" onclick="markAllRead()">Mark all Read</button>
+                </div>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>From</th>
+                                <th>Subject</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="repliesBody">
+                            <tr><td colspan="4" style="text-align:center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        requireAuth();
+        
+        async function loadReplies() {
+            try {
+                const replies = await api.get('/replies');
+                const tBody = document.getElementById('repliesBody');
+                tBody.innerHTML = '';
+                if(replies.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="4" style="text-align:center">No replies found.</td></tr>';
+                    return;
+                }
+                
+                replies.forEach(r => {
+                    const rowStl = r.is_read ? "" : "font-weight:bold; background:var(--bg-secondary)";
+                    tBody.innerHTML += `<tr style="${rowStl}">
+                        <td>${r.from_email}</td>
+                        <td>${r.subject}</td>
+                        <td>${new Date(r.received_at).toLocaleString()}</td>
+                        <td>
+                            ${!r.is_read ? `<button onclick="markRead('${r._id}')" class="btn btn-sm btn-secondary">Read</button>` : ''}
+                            <button onclick="delReply('${r._id}')" class="btn btn-sm btn-danger">Del</button>
+                        </td>
+                    </tr>`;
+                });
+            } catch (err) { console.error(err); }
+        }
+        
+        window.markRead = async (id) => { await api.put(`/replies/${id}/read`); loadReplies(); }
+        window.delReply = async (id) => { await api.delete(`/replies/${id}`); loadReplies(); }
+        window.markAllRead = async () => { await api.post('/replies/read-all'); loadReplies(); }
+        window.syncIMAP = async () => { 
+            await api.post('/replies/sync'); 
+            alert("Background sync started. Check back in a minute."); 
+        }
+        
+        loadReplies();
+    </script>
+</body>
+</html>
