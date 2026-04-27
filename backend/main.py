@@ -36,15 +36,27 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await connect_db()
-    db = await get_db()
-    await init_db(db)
-    await seed_admin(db)
-    await start_scheduler(db)
+    try:
+        await connect_db()
+        db = await get_db()
+        await init_db(db)
+        await seed_admin(db)
+        # Only start scheduler if not in a simple serverless request context if possible, 
+        # but try-except it anyway
+        try:
+            await start_scheduler(db)
+        except Exception as se:
+            logger.error(f"Scheduler failed to start: {se}")
+    except Exception as e:
+        logger.error(f"Startup sequence failed: {e}")
+        
     yield
     # Shutdown
-    await stop_scheduler()
-    await close_db()
+    try:
+        await stop_scheduler()
+        await close_db()
+    except:
+        pass
 
 app = FastAPI(title="BulkReach Pro API", lifespan=lifespan)
 app.state.limiter = limiter
