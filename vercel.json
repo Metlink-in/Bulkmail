@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/main.py",
+      "use": "@vercel/python",
+      "config": { "maxDuration": 30 }
+    },
+    {
+      "src": "frontend/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/main.py"
+    },
+    {
+      "src": "/css/(.*)",
+      "dest": "frontend/css/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "frontend/js/$1"
+    },
+    {
+      "src": "/pages/(.*)",
+      "dest": "frontend/pages/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ]
+}

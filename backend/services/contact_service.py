@@ -116,7 +116,10 @@ async def save_contact_list(db, user_id: str, name: str, contacts: list[dict]):
 
 async def get_contact_lists(db, user_id: str):
     cursor = db.contact_lists.find({"user_id": user_id})
-    return await cursor.to_list(length=1000)
+    lists = await cursor.to_list(length=1000)
+    for l in lists:
+        l["total_contacts"] = await db.contacts.count_documents({"list_id": l["_id"]})
+    return lists
 
 async def get_contact_list(db, user_id: str, list_id: str):
     return await db.contact_lists.find_one({"_id": list_id, "user_id": user_id})

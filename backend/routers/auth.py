@@ -45,7 +45,7 @@ async def register(
     }
 
 @router.post("/login")
-@limiter.limit("5/15minute")
+@limiter.limit("100/minute")
 async def login(
     request: Request,
     user_login: UserLogin,

@@ -24,8 +24,17 @@ SPAM_WORDS = [
     "while supplies last", "100% free", "call now", "deal of a lifetime"
 ]
 
-async def get_user_smtp_settings(db, user_id: str) -> dict:
-    creds = await db.user_credentials.find_one({"user_id": user_id})
+async def get_user_smtp_settings(db, user_id: str, profile_id: str = None) -> dict:
+    if profile_id:
+        from bson import ObjectId
+        try: oid = ObjectId(profile_id)
+        except: oid = profile_id
+        creds = await db.user_credentials.find_one({"_id": oid, "user_id": user_id})
+    else:
+        creds = await db.user_credentials.find_one({"user_id": user_id, "is_default": True})
+        if not creds:
+            creds = await db.user_credentials.find_one({"user_id": user_id})
+            
     if not creds or not creds.get("smtp_host"):
         return {}
     
@@ -116,10 +125,22 @@ async def send_single_email(smtp_settings: dict, message: MIMEMultipart, to_emai
     use_ssl = smtp_settings.get("use_ssl", False)
     
     try:
-        smtp_client = aiosmtplib.SMTP(hostname=host, port=port, use_tls=use_ssl, timeout=30)
+        # For port 465, use_tls must be True in the constructor
+        # For port 587, use_tls must be False and then call starttls()
+        is_ssl = (port == 465 or use_ssl)
+        
+        smtp_client = aiosmtplib.SMTP(
+            hostname=host, 
+            port=port, 
+            use_tls=is_ssl, 
+            timeout=30
+        )
         await smtp_client.connect()
-        if use_tls:
+        
+        # If not SSL but we want TLS (STARTTLS), upgrade now
+        if not is_ssl and use_tls:
             await smtp_client.starttls()
+            
         await smtp_client.login(user, password)
         await smtp_client.send_message(message)
         await smtp_client.quit()
@@ -137,7 +158,7 @@ async def process_mail_job(db, job_id: str):
     await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "running", "updated_at": get_current_timestamp()}})
     
     user_id = job["user_id"]
-    smtp_settings = await get_user_smtp_settings(db, user_id)
+    smtp_settings = await get_user_smtp_settings(db, user_id, job.get("sender_profile_id"))
     if not smtp_settings:
         await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "failed", "error": "SMTP not configured"}})
         return
@@ -203,6 +224,7 @@ async def process_mail_job(db, job_id: str):
                 "user_id": user_id,
                 "job_id": job_id,
                 "contact_id": contact["_id"],
+                "email": contact["email"],
                 "sent_at": get_current_timestamp(),
                 "status": "failed",
                 "error_message": val["reason"]
@@ -233,6 +255,7 @@ async def process_mail_job(db, job_id: str):
             "user_id": user_id,
             "job_id": job_id,
             "contact_id": contact["_id"],
+            "email": contact["email"],
             "sent_at": get_current_timestamp(),
             "status": "sent" if res["success"] else "failed",
             "error_message": res["error"],

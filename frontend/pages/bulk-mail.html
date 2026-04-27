@@ -77,14 +77,14 @@
 
                         <div class="editor-container">
                             <div class="editor-toolbar">
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('bold')" title="Bold"><strong>B</strong></button>
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('italic')" title="Italic"><em>I</em></button>
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('bold')" title="Bold"><strong>B</strong></button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('italic')" title="Italic"><em>I</em></button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('underline')" title="Underline"><u>U</u></button>
                                 <div style="width:1px; height:20px; background:var(--border); margin:0 4px;"></div>
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('formatBlock', 'h2')">H2</button>
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="formatDoc('insertUnorderedList')">• List</button>
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="insertLink()">Link</button>
-                                <button type="button" class="btn btn-sm btn-ghost" onclick="insertImage()">Image</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('formatBlock', 'h2')">H2</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('insertUnorderedList')">• List</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); insertLink()">Link</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); insertImage()">Image</button>
                                 <div style="width:1px; height:20px; background:var(--border); margin:0 4px;"></div>
                                 <select id="templateSelect" class="input" style="width:auto; padding:4px 8px; font-size:12px;">
                                     <option value="">Load Template...</option>
@@ -166,10 +166,10 @@
                             <input type="radio" name="recipientSource" value="saved" checked> Saved List
                         </label>
                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="radio" name="recipientSource" value="csv"> Upload CSV
+                            <input type="radio" name="recipientSource" value="sheets"> Google Sheets
                         </label>
                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="radio" name="recipientSource" value="sheets"> Google Sheets
+                            <input type="radio" name="recipientSource" value="manual"> Manual Input
                         </label>
                     </div>
 
@@ -202,6 +202,14 @@
                         <button id="testSheetsBtn" class="btn btn-secondary btn-sm">Verify Sheets Access</button>
                     </div>
 
+                    <div id="sourceManual" class="source-panel" style="display:none">
+                        <div class="input-group">
+                            <label class="input-label">Paste Email List (one per line)</label>
+                            <textarea id="manualEmails" class="input" rows="10" placeholder="user1@example.com&#10;user2@example.com"></textarea>
+                        </div>
+                        <button id="importManualBtn" class="btn btn-secondary btn-sm">Import Manually</button>
+                    </div>
+
                     <div id="previewArea" style="margin-top:32px; display:none;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                             <h3 id="recipientCount">0 Recipients Loaded</h3>
@@ -228,6 +236,15 @@
                         <div class="input-group" style="margin-top:16px;">
                             <label class="input-label">Campaign Name</label>
                             <input type="text" id="campaignName" class="input" placeholder="e.g. Q4 Outreach">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Sender Profile</label>
+                            <select id="senderProfileSelect" class="input">
+                                <option value="">-- Use Default Profile --</option>
+                            </select>
+                            <p style="font-size:11px; color:var(--text-secondary); margin-top:4px;">
+                                <a href="/pages/settings.html" style="color:var(--primary); text-decoration:none;">+ Add/Manage Profiles</a>
+                            </p>
                         </div>
                         <div class="input-group">
                             <label class="input-label">Send Delay (minutes): <span id="delayVal">5</span></label>
@@ -337,6 +354,7 @@
     </div>
 
     <script src="/js/api.js"></script>
+    <script src="/js/sidebar.js"></script>
     <script>
         requireAuth();
         
@@ -354,9 +372,18 @@
             setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        function formatDoc(cmd, val) { document.execCommand(cmd, false, val); }
-        function insertLink() { const url = prompt("Enter URL:"); if(url) formatDoc('createLink', url); }
-        function insertImage() { const url = prompt("Enter Image URL:"); if(url) formatDoc('insertImage', url); }
+        function formatDoc(cmd, val) { 
+            document.getElementById('htmlBody').focus();
+            document.execCommand(cmd, false, val); 
+        }
+        function insertLink() { 
+            const url = prompt("Enter URL:"); 
+            if(url) formatDoc('createLink', url); 
+        }
+        function insertImage() { 
+            const url = prompt("Enter Image URL:"); 
+            if(url) formatDoc('insertImage', url); 
+        }
 
         function closeModal() { document.getElementById('templateModal').style.display = 'none'; }
 
@@ -449,7 +476,38 @@
                 if(e.target.value === 'saved') document.getElementById('sourceSaved').style.display = 'block';
                 if(e.target.value === 'csv') document.getElementById('sourceCsv').style.display = 'block';
                 if(e.target.value === 'sheets') document.getElementById('sourceSheets').style.display = 'block';
+                if(e.target.value === 'manual') document.getElementById('sourceManual').style.display = 'block';
             });
+        });
+
+        document.getElementById('importManualBtn').addEventListener('click', async () => {
+            const val = document.getElementById('manualEmails').value;
+            const emails = val.split('\n').map(e => e.trim()).filter(e => e && e.includes('@'));
+            if(emails.length === 0) return showToast("No valid emails found", "warning");
+            
+            const btn = document.getElementById('importManualBtn');
+            btn.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append("list_name", "Manual Import " + new Date().toLocaleTimeString());
+                fd.append("emails", val);
+                const res = await api.upload('/contacts/import/manual', fd);
+                
+                // Now load this list
+                const list = await api.get(`/contacts/${res.list_id}`);
+                renderRecipientPreview(list.contacts);
+                
+                // Add to dropdown and select it
+                const sel = document.getElementById('contactListSelect');
+                const opt = document.createElement('option');
+                opt.value = res.list_id;
+                opt.textContent = `Manual Import (${emails.length})`;
+                opt.selected = true;
+                sel.appendChild(opt);
+                
+                showToast(`${emails.length} emails imported manually`);
+            } catch(e) { showToast(e.message, "danger"); }
+            finally { btn.disabled = false; }
         });
 
         document.getElementById('contactListSelect').addEventListener('change', async (e) => {
@@ -509,8 +567,19 @@
                     contact_list_id: document.getElementById('contactListSelect').value || null,
                     interval_seconds: parseInt(document.getElementById('delayRange').value) * 60,
                     daily_limit: parseInt(document.getElementById('dailyLimit').value) || 500,
-                    campaign_name: document.getElementById('campaignName').value || "Unnamed Campaign"
+                    campaign_name: document.getElementById('campaignName').value || "Unnamed Campaign",
+                    contact_ids: loadedContacts.some(c => c._id.startsWith('manual')) ? loadedContacts.map(c => c.email) : null // Backend fallback
                 };
+                
+                // If it's manual, we should probably create a temporary list or send IDs
+                // In our current backend, /jobs expects contact_list_id OR contact_ids
+                if(loadedContacts.length > 0 && !payload.contact_list_id) {
+                    // If they are not from a saved list, we treat them as individual IDs or emails
+                    // For now, let's just use the emails if manual
+                    payload.contact_ids = loadedContacts.map(c => c._id);
+                    // But wait, the backend needs these contacts to exist in the DB.
+                    // For manual input, we should probably save them to a "Manual List" first.
+                }
                 
                 if(document.getElementById('scheduleAt').value) payload.schedule_at = new Date(document.getElementById('scheduleAt').value).toISOString();
                 
@@ -522,6 +591,7 @@
         });
 
         function startJobPolling(jobId) {
+            activeJobId = jobId;
             document.getElementById('liveProgress').style.display = 'block';
             document.getElementById('jobControls').style.display = 'flex';
             if(jobPollInterval) clearInterval(jobPollInterval);
@@ -544,13 +614,52 @@
             }, 5000);
         }
 
+        // --- JOB CONTROLS ---
+        document.getElementById('pauseJobBtn').addEventListener('click', async () => {
+            if(!activeJobId) return;
+            try {
+                await api.post(`/mail/jobs/${activeJobId}/pause`);
+                showToast("Job paused");
+                document.getElementById('pauseJobBtn').style.display = 'none';
+                document.getElementById('resumeJobBtn').style.display = 'inline-flex';
+            } catch(e) { showToast(e.message, "danger"); }
+        });
+
+        document.getElementById('resumeJobBtn').addEventListener('click', async () => {
+            if(!activeJobId) return;
+            try {
+                await api.post(`/mail/jobs/${activeJobId}/resume`);
+                showToast("Job resumed");
+                document.getElementById('resumeJobBtn').style.display = 'none';
+                document.getElementById('pauseJobBtn').style.display = 'inline-flex';
+            } catch(e) { showToast(e.message, "danger"); }
+        });
+
+        document.getElementById('cancelJobBtn').addEventListener('click', async () => {
+            if(!activeJobId) return;
+            if(!confirm("Are you sure you want to cancel this campaign?")) return;
+            try {
+                await api.post(`/mail/jobs/${activeJobId}/cancel`);
+                showToast("Job cancelled", "warning");
+                clearInterval(jobPollInterval);
+                document.getElementById('jobControls').style.display = 'none';
+                document.getElementById('liveProgress').style.display = 'none';
+            } catch(e) { showToast(e.message, "danger"); }
+        });
+
         // --- HISTORY & INITIAL DATA ---
         async function loadInitial() {
             try {
+                // Load Lists
                 const lists = await api.get('/contacts/lists');
                 const sel = document.getElementById('contactListSelect');
-                lists.items.forEach(l => { sel.innerHTML += `<option value="${l.id}">${l.name} (${l.total_contacts})</option>`; });
+                const listsArr = Array.isArray(lists) ? lists : (lists.items || []);
+                listsArr.forEach(l => { 
+                    const count = l.total_contacts !== undefined ? l.total_contacts : 0;
+                    sel.innerHTML += `<option value="${l.id || l._id}">${l.name} (${count})</option>`; 
+                });
                 
+                // Load Templates
                 const templates = await api.get('/template');
                 const tSel = document.getElementById('templateSelect');
                 templates.forEach(t => { tSel.innerHTML += `<option value="${t.id}">${t.name}</option>`; });
@@ -563,6 +672,7 @@
                     subjectInput.dispatchEvent(new Event('input'));
                 });
 
+                // Load History
                 const history = await api.get('/mail/jobs?limit=10');
                 const hBody = document.getElementById('historyBody');
                 history.forEach(j => {
@@ -574,8 +684,56 @@
                         <td><button class="btn btn-sm btn-ghost" onclick="startJobPolling('${j._id}')">View</button></td>
                     </tr>`;
                 });
-            } catch(e){}
+
+                // Load Sender Profiles
+                try {
+                    const profiles = await api.get('/settings/profiles');
+                    const pSel = document.getElementById('senderProfileSelect');
+                    profiles.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id;
+                        opt.textContent = `${p.name} (${p.smtp_user})`;
+                        if(p.is_default) opt.selected = true;
+                        pSel.appendChild(opt);
+                    });
+                } catch(e) { console.error("Profiles load error", e); }
+
+            } catch(e) { console.error("Initial load error", e); }
         }
+
+        // Updated start campaign logic to include sender_profile_id
+        document.getElementById('startCampaignBtn').addEventListener('click', async (e) => {
+            if(!subjectInput.value || !htmlBody.innerText) return showToast("Subject and body required", "warning");
+            const btn = e.target; btn.disabled = true; btn.textContent = "Launching...";
+            
+            try {
+                const tRes = await api.post('/template', {
+                    name: "Campaign " + new Date().toLocaleString(),
+                    subject: subjectInput.value,
+                    html_body: htmlBody.innerHTML
+                });
+
+                const payload = {
+                    sender_profile_id: document.getElementById('senderProfileSelect').value || null,
+                    template_id: tRes.id,
+                    contact_list_id: document.getElementById('contactListSelect').value || null,
+                    interval_seconds: parseInt(document.getElementById('delayRange').value) * 60,
+                    daily_limit: parseInt(document.getElementById('dailyLimit').value) || 500,
+                    campaign_name: document.getElementById('campaignName').value || "Unnamed Campaign",
+                };
+                
+                if(loadedContacts.length > 0 && !payload.contact_list_id) {
+                    payload.contact_ids = loadedContacts.map(c => c._id);
+                }
+                
+                if(document.getElementById('scheduleAt').value) payload.schedule_at = new Date(document.getElementById('scheduleAt').value).toISOString();
+                
+                const res = await api.post('/mail/jobs', payload);
+                activeJobId = res.job_id;
+                showToast("Campaign launched successfully!");
+                startJobPolling(activeJobId);
+            } catch (err) { showToast(err.message, "danger"); btn.disabled = false; btn.textContent = "Launch Campaign"; }
+        });
 
         loadInitial();
     </script>

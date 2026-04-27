@@ -106,6 +106,7 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <script src="/js/api.js"></script>
+    <script src="/js/sidebar.js"></script>
     <script>
         requireAuth();
 
@@ -182,10 +183,18 @@
             btn.innerHTML = '<span class="spinner spinner-sm"></span> Syncing...';
             try {
                 await api.post('/replies/sync');
-                showToast("IMAP Sync triggered in background");
-                setTimeout(loadReplies, 5000);
-            } catch(e) { showToast(e.message, "danger"); }
-            finally { btn.disabled = false; btn.innerHTML = 'Sync Now'; }
+                showToast("IMAP Sync triggered! Checking for new replies...");
+                // Keep the button disabled for a bit to prevent multiple clicks
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Sync Now';
+                    loadReplies();
+                }, 5000);
+            } catch(e) { 
+                showToast(e.message, "danger"); 
+                btn.disabled = false; 
+                btn.innerHTML = 'Sync Now';
+            }
         }
 
         async function markAllRead() {

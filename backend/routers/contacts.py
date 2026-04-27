@@ -129,6 +129,37 @@ async def import_sheets(
         "errors": []
     }
 
+@router.post("/{list_id}/contacts")
+async def add_single_contact(list_id: str, data: Dict[str, Any], current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    user_id = str(current_user["_id"])
+    
+    # Check if list exists and belongs to user
+    c_list = await db.contact_lists.find_one({"_id": list_id, "user_id": user_id})
+    if not c_list:
+        raise HTTPException(status_code=404, detail="Contact list not found")
+        
+    email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+        
+    from backend.services.validation_service import validate_email
+    validation = await validate_email(email)
+    
+    contact = {
+        "_id": str(uuid.uuid4()),
+        "list_id": list_id,
+        "user_id": user_id,
+        "email": email,
+        "name": data.get("name"),
+        "org": data.get("org"),
+        "custom_fields": data.get("custom_fields", {}),
+        "email_status": validation["status"],
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    await db.contacts.insert_one(contact)
+    return contact
+
 @router.put("/{list_id}/contacts/{contact_id}")
 async def update_single_contact(list_id: str, contact_id: str, data: Dict[str, Any], current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
@@ -143,6 +174,23 @@ async def update_single_contact(list_id: str, contact_id: str, data: Dict[str, A
         raise HTTPException(status_code=404, detail="Contact not found")
     return updated
 
+@router.post("/import/manual")
+async def import_manual(
+    list_name: str = Form(...),
+    emails: str = Form(...),
+    current_user: Dict[str, Any] = Depends(require_user),
+    db = Depends(get_db)
+):
+    user_id = str(current_user["_id"])
+    email_list = [e.strip() for e in emails.split('\n') if e.strip() and '@' in e]
+    contacts = [{"email": e, "name": e.split('@')[0], "org": None, "custom_fields": {}, "email_status": "unknown"} for e in email_list]
+    
+    result = await save_contact_list(db, user_id, list_name, contacts)
+    return {
+        "list_id": result["_id"],
+        "total_imported": len(contacts)
+    }
+
 @router.delete("/{list_id}/contacts/{contact_id}")
 async def delete_single_contact(list_id: str, contact_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
@@ -150,6 +198,13 @@ async def delete_single_contact(list_id: str, contact_id: str, current_user: Dic
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Contact not found")
     return {"message": "Contact deleted"}
+
+@router.post("/{list_id}/delete-bulk")
+async def delete_bulk_contacts(list_id: str, body: Dict[str, List[str]], current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    user_id = str(current_user["_id"])
+    contact_ids = body.get("contact_ids", [])
+    result = await db.contacts.delete_many({"_id": {"$in": contact_ids}, "list_id": list_id, "user_id": user_id})
+    return {"message": f"Deleted {result.deleted_count} contacts"}
 
 @router.post("/validate")
 async def validate_emails(body: ValidateEmailsRequest, current_user: Dict[str, Any] = Depends(require_user)):

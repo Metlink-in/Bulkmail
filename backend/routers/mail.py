@@ -16,6 +16,7 @@ from backend.utils.helpers import get_current_timestamp
 router = APIRouter(tags=["mail"])
 
 class MailJobCreate(BaseModel):
+    sender_profile_id: Optional[str] = None
     template_id: str
     contact_list_id: Optional[str] = None
     contact_ids: Optional[List[str]] = None
@@ -41,6 +42,7 @@ async def create_mail_job(body: MailJobCreate, current_user: Dict[str, Any] = De
     job_doc = {
         "_id": job_id,
         "user_id": user_id,
+        "sender_profile_id": body.sender_profile_id,
         "template_id": body.template_id,
         "contact_list_id": body.contact_list_id,
         "contact_ids": body.contact_ids or [],

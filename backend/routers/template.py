@@ -24,17 +24,21 @@ def strip_tags(html):
     return re.sub('<[^<]+?>', '', html)
 
 @router.get("")
-async def get_templates(page: int = 1, limit: int = 20, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+async def get_templates(page: int = 1, limit: int = 50, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
     skip = (page - 1) * limit
-    cursor = db.mail_templates.find({"user_id": user_id}).sort("updated_at", -1).skip(skip).limit(limit)
+    
+    # Fetch both user templates and global templates
+    query = {"$or": [{"user_id": user_id}, {"is_global": True}]}
+    cursor = db.mail_templates.find(query).sort("is_global", -1).sort("updated_at", -1).skip(skip).limit(limit)
     templates = await cursor.to_list(length=limit)
     
     res = []
     for t in templates:
         t["id"] = str(t["_id"])
         t["preview_text"] = strip_tags(t.get("html_body", ""))[:100]
-        t.pop("html_body", None)
+        # Keep html_body for the list if needed, but usually we don't for list views
+        # In this app, templates.html needs the body for preview, so let's keep it for now
         t.pop("_id")
         res.append(t)
     return res
@@ -64,7 +68,9 @@ async def create_template(body: TemplateCreate, current_user: Dict[str, Any] = D
 @router.get("/{template_id}")
 async def get_template_details(template_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    t = await db.mail_templates.find_one({"_id": template_id, "user_id": user_id})
+    # Allow users to view global templates or their own
+    query = {"_id": template_id, "$or": [{"user_id": user_id}, {"is_global": True}]}
+    t = await db.mail_templates.find_one(query)
     if not t:
         raise HTTPException(status_code=404, detail="Template not found")
     t["id"] = str(t["_id"])

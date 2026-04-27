@@ -45,74 +45,26 @@
 
             <div class="settings-container">
                 <div class="tabs">
-                    <div class="tab-item active" data-target="smtp">SMTP</div>
-                    <div class="tab-item" data-target="imap">IMAP</div>
+                    <div class="tab-item active" data-target="profiles">Sender Profiles</div>
                     <div class="tab-item" data-target="ai">AI & Gemini</div>
                     <div class="tab-item" data-target="safety">Email Safety</div>
                     <div class="tab-item" data-target="sheets">Google Sheets</div>
                 </div>
 
                 <div class="card">
-                    <!-- SMTP Tab -->
-                    <div id="smtp" class="section-pane active">
-                        <h3>SMTP Server (Sending)</h3>
-                        <p style="color:var(--text-secondary); font-size:13px; margin-bottom:20px;">Configure your outbound mail server credentials.</p>
-                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:16px;">
-                            <div class="input-group">
-                                <label class="input-label">Host</label>
-                                <input type="text" id="smtp_host" class="input" placeholder="smtp.gmail.com">
+                    <!-- Profiles Tab -->
+                    <div id="profiles" class="section-pane active">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <div>
+                                <h3>Sender Profiles & Domains</h3>
+                                <p style="color:var(--text-secondary); font-size:13px;">Manage multiple SMTP accounts for different sending domains.</p>
                             </div>
-                            <div class="input-group">
-                                <label class="input-label">Port</label>
-                                <input type="number" id="smtp_port" class="input" value="465">
-                            </div>
+                            <button onclick="openProfileModal()" class="btn btn-primary btn-sm">+ Add Profile</button>
                         </div>
-                        <div class="input-group">
-                            <label class="input-label">Username</label>
-                            <input type="email" id="smtp_user" class="input" placeholder="user@example.com">
+                        
+                        <div id="profilesList" style="display:grid; gap:16px;">
+                            <!-- Profiles injected here -->
                         </div>
-                        <div class="input-group password-input-group">
-                            <label class="input-label">Password</label>
-                            <input type="password" id="smtp_password" class="input" placeholder="••••••••••••">
-                            <span class="toggle-password" onclick="togglePass('smtp_password')">👁️</span>
-                        </div>
-                        <div style="display:flex; gap:16px; margin-bottom:16px;">
-                            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
-                                <input type="checkbox" id="use_tls"> Use STARTTLS
-                            </label>
-                            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
-                                <input type="checkbox" id="use_ssl" checked> Use SSL/TLS
-                            </label>
-                        </div>
-                        <button onclick="testConnection('smtp')" class="btn btn-secondary btn-sm">Test SMTP Connection</button>
-                        <div id="smtp_test_res" class="test-result"></div>
-                    </div>
-
-                    <!-- IMAP Tab -->
-                    <div id="imap" class="section-pane">
-                        <h3>IMAP Server (Replies)</h3>
-                        <p style="color:var(--text-secondary); font-size:13px; margin-bottom:20px;">Fetch incoming replies to track your campaign performance.</p>
-                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:16px;">
-                            <div class="input-group">
-                                <label class="input-label">Host</label>
-                                <input type="text" id="imap_host" class="input" placeholder="imap.gmail.com">
-                            </div>
-                            <div class="input-group">
-                                <label class="input-label">Port</label>
-                                <input type="number" id="imap_port" class="input" value="993">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label class="input-label">Username</label>
-                            <input type="email" id="imap_user" class="input">
-                        </div>
-                        <div class="input-group password-input-group">
-                            <label class="input-label">Password</label>
-                            <input type="password" id="imap_password" class="input" placeholder="••••••••••••">
-                            <span class="toggle-password" onclick="togglePass('imap_password')">👁️</span>
-                        </div>
-                        <button onclick="testConnection('imap')" class="btn btn-secondary btn-sm">Test IMAP Connection</button>
-                        <div id="imap_test_res" class="test-result"></div>
                     </div>
 
                     <!-- AI Tab -->
@@ -132,15 +84,15 @@
                     <div id="safety" class="section-pane">
                         <h3>Email Safety & Limits</h3>
                         <div class="input-group">
-                            <label class="input-label">Default Delay Between Emails (Seconds)</label>
+                            <label class="input-label">Global Default Delay (Seconds)</label>
                             <input type="number" id="email_delay_seconds" class="input" value="300" min="60">
                         </div>
                         <div class="input-group">
-                            <label class="input-label">Daily Send Limit</label>
+                            <label class="input-label">Global Daily Limit</label>
                             <input type="number" id="daily_send_limit" class="input" value="500">
                         </div>
                         <div class="input-group">
-                            <label class="input-label">Unsubscribe Footer (HTML)</label>
+                            <label class="input-label">Default Unsubscribe Footer (HTML)</label>
                             <textarea id="unsubscribe_footer" class="input" rows="4"></textarea>
                         </div>
                     </div>
@@ -165,11 +117,69 @@
         </main>
     </div>
 
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content" style="max-width:600px;">
+            <h2 id="modalTitle">Add Sender Profile</h2>
+            <input type="hidden" id="p_id">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="input-group">
+                    <label class="input-label">Profile Name</label>
+                    <input type="text" id="p_name" class="input" placeholder="e.g. Sales Account">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">From Name</label>
+                    <input type="text" id="p_from_name" class="input" placeholder="John Doe">
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="input-group">
+                    <label class="input-label">SMTP User (Email)</label>
+                    <input type="email" id="p_smtp_user" class="input">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Reply-To Email</label>
+                    <input type="email" id="p_reply_to" class="input">
+                </div>
+            </div>
+            <div class="input-group password-input-group">
+                <label class="input-label">SMTP Password</label>
+                <input type="password" id="p_smtp_password" class="input">
+                <span class="toggle-password" onclick="togglePass('p_smtp_password')">👁️</span>
+            </div>
+            <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px;">
+                <div class="input-group">
+                    <label class="input-label">SMTP Host</label>
+                    <input type="text" id="p_smtp_host" class="input" placeholder="smtp.gmail.com">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">SMTP Port</label>
+                    <input type="number" id="p_smtp_port" class="input" value="465">
+                </div>
+            </div>
+            <div style="display:flex; gap:16px; margin:16px 0;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+                    <input type="checkbox" id="p_use_ssl" checked> Use SSL/TLS
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+                    <input type="checkbox" id="p_is_default"> Default Profile
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button onclick="closeProfileModal()" class="btn btn-ghost">Cancel</button>
+                <button onclick="saveProfile()" class="btn btn-primary">Save Profile</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toastContainer" class="toast-container"></div>
 
     <script src="/js/api.js"></script>
+    <script src="/js/sidebar.js"></script>
     <script>
         requireAuth();
+
+        let currentProfiles = [];
 
         function showToast(msg, type="success") {
             const container = document.getElementById('toastContainer');
@@ -195,77 +205,158 @@
             });
         });
 
+        // --- LOAD PROFILES ---
+        async function loadProfiles() {
+            try {
+                const profiles = await api.get('/settings/profiles');
+                currentProfiles = profiles;
+                const list = document.getElementById('profilesList');
+                list.innerHTML = '';
+                
+                if(profiles.length === 0) {
+                    list.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-secondary);">No sender profiles added yet.</div>';
+                    return;
+                }
+
+                profiles.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.style.padding = '16px';
+                    card.style.display = 'flex';
+                    card.style.justifyContent = 'space-between';
+                    card.style.alignItems = 'center';
+                    card.innerHTML = `
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <strong style="font-size:16px;">${p.name}</strong>
+                                ${p.is_default ? '<span class="badge badge-success">Default</span>' : ''}
+                            </div>
+                            <div style="font-size:13px; color:var(--text-secondary); margin-top:4px;">
+                                ${p.smtp_user} (${p.smtp_host}:${p.smtp_port})
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="editProfile('${p.id}')" class="btn btn-sm btn-ghost">Edit</button>
+                            <button onclick="deleteProfile('${p.id}')" class="btn btn-sm btn-ghost" style="color:var(--danger);">Delete</button>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+            } catch (err) { showToast(err.message, "danger"); }
+        }
+
         // --- LOAD SETTINGS ---
         async function loadSettings() {
             try {
                 const s = await api.get('/settings');
-                const fields = [
-                    'smtp_host', 'smtp_port', 'smtp_user', 
-                    'imap_host', 'imap_port', 'imap_user',
-                    'email_delay_seconds', 'daily_send_limit', 
-                    'unsubscribe_footer', 'default_sheet_id'
-                ];
+                const fields = ['email_delay_seconds', 'daily_send_limit', 'unsubscribe_footer', 'default_sheet_id'];
                 fields.forEach(f => {
                     if(document.getElementById(f)) document.getElementById(f).value = s[f] || (f.includes('port') ? 465 : "");
                 });
-                document.getElementById('use_tls').checked = s.use_tls || false;
-                document.getElementById('use_ssl').checked = s.use_ssl || false;
-                
-                // For secrets, we just show placeholders if they exist
-                if(s.smtp_password) document.getElementById('smtp_password').placeholder = "••••••••••••";
-                if(s.imap_password) document.getElementById('imap_password').placeholder = "••••••••••••";
                 if(s.gemini_api_key) document.getElementById('gemini_api_key').placeholder = "••••••••••••";
                 if(s.google_sheets_api_key) document.getElementById('google_sheets_api_key').placeholder = "••••••••••••";
-
             } catch (err) { showToast(err.message, "danger"); }
         }
 
-        // --- SAVE SETTINGS ---
-        document.getElementById('saveAllBtn').addEventListener('click', async () => {
-            const payload = {};
-            const fields = [
-                'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password',
-                'imap_host', 'imap_port', 'imap_user', 'imap_password',
-                'gemini_api_key', 'email_delay_seconds', 'daily_send_limit',
-                'unsubscribe_footer', 'google_sheets_api_key', 'default_sheet_id'
-            ];
-            
-            fields.forEach(f => {
-                const val = document.getElementById(f).value;
-                if(val) {
-                    payload[f] = f.includes('port') || f.includes('limit') || f.includes('delay') ? parseInt(val) : val;
-                }
-            });
-            
-            payload.use_tls = document.getElementById('use_tls').checked;
-            payload.use_ssl = document.getElementById('use_ssl').checked;
+        // --- MODAL LOGIC ---
+        function openProfileModal(id = null) {
+            document.getElementById('profileModal').classList.add('active');
+            if(id) {
+                const p = currentProfiles.find(x => x.id === id);
+                document.getElementById('modalTitle').textContent = 'Edit Sender Profile';
+                document.getElementById('p_id').value = p.id;
+                document.getElementById('p_name').value = p.name;
+                document.getElementById('p_from_name').value = p.from_name;
+                document.getElementById('p_smtp_user').value = p.smtp_user;
+                document.getElementById('p_reply_to').value = p.reply_to_email;
+                document.getElementById('p_smtp_host').value = p.smtp_host;
+                document.getElementById('p_smtp_port').value = p.smtp_port;
+                document.getElementById('p_smtp_password').value = "••••••••";
+                document.getElementById('p_use_ssl').checked = p.use_ssl;
+                document.getElementById('p_is_default').checked = p.is_default;
+            } else {
+                document.getElementById('modalTitle').textContent = 'Add Sender Profile';
+                document.getElementById('p_id').value = '';
+                document.querySelectorAll('#profileModal input:not([type="checkbox"])').forEach(i => i.value = '');
+                document.getElementById('p_smtp_port').value = '465';
+                document.getElementById('p_use_ssl').checked = true;
+            }
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profileModal').classList.remove('active');
+        }
+
+        async function saveProfile() {
+            const id = document.getElementById('p_id').value;
+            const payload = {
+                name: document.getElementById('p_name').value,
+                from_name: document.getElementById('p_from_name').value,
+                smtp_user: document.getElementById('p_smtp_user').value,
+                reply_to_email: document.getElementById('p_reply_to').value,
+                smtp_host: document.getElementById('p_smtp_host').value,
+                smtp_port: parseInt(document.getElementById('p_smtp_port').value),
+                smtp_password: document.getElementById('p_smtp_password').value,
+                use_ssl: document.getElementById('p_use_ssl').checked,
+                is_default: document.getElementById('p_is_default').checked
+            };
 
             try {
+                if(id) await api.put(`/settings/profiles/${id}`, payload);
+                else await api.post('/settings/profiles', payload);
+                
+                showToast("Profile saved!");
+                closeProfileModal();
+                loadProfiles();
+            } catch (err) { showToast(err.message, "danger"); }
+        }
+
+        async function deleteProfile(id) {
+            if(confirm("Are you sure you want to delete this profile?")) {
+                try {
+                    await api.delete(`/settings/profiles/${id}`);
+                    showToast("Profile deleted");
+                    loadProfiles();
+                } catch (err) { showToast(err.message, "danger"); }
+            }
+        }
+
+        function editProfile(id) { openProfileModal(id); }
+
+        // --- SAVE GLOBAL SETTINGS ---
+        document.getElementById('saveAllBtn').addEventListener('click', async () => {
+            const payload = {
+                gemini_api_key: document.getElementById('gemini_api_key').value,
+                email_delay_seconds: parseInt(document.getElementById('email_delay_seconds').value),
+                daily_send_limit: parseInt(document.getElementById('daily_send_limit').value),
+                unsubscribe_footer: document.getElementById('unsubscribe_footer').value,
+                google_sheets_api_key: document.getElementById('google_sheets_api_key').value,
+                default_sheet_id: document.getElementById('default_sheet_id').value
+            };
+            
+            try {
                 await api.post('/settings', payload);
-                showToast("All settings saved successfully!");
+                showToast("Global settings saved!");
                 loadSettings();
             } catch (err) { showToast(err.message, "danger"); }
         });
 
-        // --- TEST CONNECTIONS ---
         async function testConnection(type) {
             const resDiv = document.getElementById(`${type}_test_res`);
             resDiv.style.display = 'block';
             resDiv.className = 'test-result';
-            resDiv.innerHTML = '<span class="spinner spinner-sm"></span> Testing...';
-            
+            resDiv.innerHTML = 'Testing...';
             try {
-                // We save before testing to ensure we use current values
-                // In a real app, you might send current values in the test request
                 const res = await api.post(`/settings/${type}/test`, {});
-                resDiv.textContent = res.message || "Test Successful!";
+                resDiv.textContent = res.message;
                 resDiv.classList.add('test-success');
             } catch (err) {
-                resDiv.textContent = err.message || "Test Failed";
+                resDiv.textContent = err.message;
                 resDiv.classList.add('test-error');
             }
         }
 
+        loadProfiles();
         loadSettings();
     </script>
 </body>

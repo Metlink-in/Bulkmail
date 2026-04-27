@@ -49,7 +49,12 @@
             <div class="split-view">
                 <div class="editor-pane">
                     <div class="pane-header">
-                        <input type="text" id="tSubject" class="input" placeholder="Email Subject" style="border:none; background:transparent; font-weight:600;">
+                        <div style="display:flex; gap:12px; width:100%; align-items:center;">
+                            <input type="text" id="tSubject" class="input" placeholder="Email Subject" style="border:none; background:transparent; font-weight:600; flex:1;">
+                            <select id="starterSelect" class="input" style="width:auto; padding:4px 8px; font-size:12px; border:1px solid var(--border);">
+                                <option value="">Choose Starter...</option>
+                            </select>
+                        </div>
                     </div>
                     <textarea id="tBody" class="raw-editor" placeholder="Write your HTML here..."></textarea>
                     
@@ -113,8 +118,22 @@
         function openTestModal() { document.getElementById('testModal').style.display = 'flex'; }
 
         async function loadTemplate() {
-            if(!currentId) return;
             try {
+                const templates = await api.get('/template');
+                const sSel = document.getElementById('starterSelect');
+                templates.forEach(t => {
+                    if(t.is_global) sSel.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+                });
+                
+                sSel.addEventListener('change', async () => {
+                    if(!sSel.value) return;
+                    const t = await api.get(`/template/${sSel.value}`);
+                    document.getElementById('tSubject').value = t.subject;
+                    document.getElementById('tBody').value = t.html_body;
+                    updatePreview();
+                });
+
+                if(!currentId) return;
                 const t = await api.get(`/template/${currentId}`);
                 document.getElementById('templateName').textContent = t.name;
                 document.getElementById('tSubject').value = t.subject;

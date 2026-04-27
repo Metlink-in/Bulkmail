@@ -38,14 +38,103 @@ class SettingsBody(BaseModel):
     google_sheets_api_key: Optional[str] = None
     default_sheet_id: Optional[str] = None
 
-class SheetsTestBody(BaseModel):
-    api_key: str
-    sheet_id: str
+class SenderProfile(BaseModel):
+    name: str
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    smtp_password: str
+    use_tls: bool = False
+    use_ssl: bool = False
+    imap_host: Optional[str] = None
+    imap_port: Optional[int] = 993
+    imap_user: Optional[str] = None
+    imap_password: Optional[str] = None
+    from_name: str
+    reply_to_email: str
+    is_default: bool = False
+
+@router.get("/profiles")
+async def get_sender_profiles(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    user_id = str(current_user["_id"])
+    cursor = db.user_credentials.find({"user_id": user_id})
+    profiles = await cursor.to_list(length=100)
+    for p in profiles:
+        p["id"] = str(p.pop("_id"))
+        p.pop("user_id", None)
+        if p.get("smtp_password"): p["smtp_password"] = "••••••••"
+        if p.get("imap_password"): p["imap_password"] = "••••••••"
+    return profiles
+
+@router.post("/profiles")
+async def add_sender_profile(body: SenderProfile, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    user_id = str(current_user["_id"])
+    data = body.dict()
+    
+    # Encrypt
+    key = settings.ENCRYPTION_KEY
+    data["smtp_password"] = encrypt_secret(data["smtp_password"], key)
+    if data.get("imap_password"):
+        data["imap_password"] = encrypt_secret(data["imap_password"], key)
+    
+    data["user_id"] = user_id
+    
+    if data["is_default"]:
+        await db.user_credentials.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
+        
+    result = await db.user_credentials.insert_one(data)
+    return {"id": str(result.inserted_id), "message": "Profile added"}
+
+@router.put("/profiles/{profile_id}")
+async def update_sender_profile(profile_id: str, body: SenderProfile, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    user_id = str(current_user["_id"])
+    data = body.dict()
+    
+    from bson import ObjectId
+    try:
+        oid = ObjectId(profile_id)
+    except:
+        # handle UUID string if used previously, but let's assume ObjectId for new profiles
+        oid = profile_id 
+
+    # Handle password masking
+    if data["smtp_password"] == "••••••••":
+        data.pop("smtp_password")
+    else:
+        data["smtp_password"] = encrypt_secret(data["smtp_password"], settings.ENCRYPTION_KEY)
+        
+    if data.get("imap_password") == "••••••••":
+        data.pop("imap_password")
+    elif data.get("imap_password"):
+        data["imap_password"] = encrypt_secret(data["imap_password"], settings.ENCRYPTION_KEY)
+
+    if data.get("is_default"):
+        await db.user_credentials.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
+
+    await db.user_credentials.update_one(
+        {"_id": oid, "user_id": user_id},
+        {"$set": data}
+    )
+    return {"message": "Profile updated"}
+
+@router.delete("/profiles/{profile_id}")
+async def delete_sender_profile(profile_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    user_id = str(current_user["_id"])
+    from bson import ObjectId
+    try: oid = ObjectId(profile_id)
+    except: oid = profile_id
+    
+    await db.user_credentials.delete_one({"_id": oid, "user_id": user_id})
+    return {"message": "Profile deleted"}
 
 @router.get("")
 async def get_settings(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    creds = await db.user_credentials.find_one({"user_id": user_id})
+    # Return general settings (like Gemini key, sheets key) which are shared
+    creds = await db.user_credentials.find_one({"user_id": user_id, "is_default": True})
+    if not creds:
+        creds = await db.user_credentials.find_one({"user_id": user_id})
+    
     if not creds:
         return {}
         

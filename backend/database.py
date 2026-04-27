@@ -31,8 +31,9 @@ async def get_db() -> AsyncIOMotorDatabase:
 async def init_db(db: AsyncIOMotorDatabase):
     # 1. users
     await db.users.create_index("email", unique=True)
-    # 2. user_credentials
-    await db.user_credentials.create_index("user_id", unique=True)
+    # 2. user_credentials (changed to allow multiple profiles)
+    await db.user_credentials.create_index("user_id")
+    await db.user_credentials.create_index([("user_id", 1), ("smtp_user", 1)], unique=True)
     # 3. mail_templates
     await db.mail_templates.create_index("user_id")
     # 4. contact_lists
