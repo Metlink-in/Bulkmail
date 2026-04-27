@@ -12,8 +12,20 @@ DATABASE_NAME = settings.MONGODB_DB_NAME
 async def connect_db():
     global client
     if client is None:
-        client = AsyncIOMotorClient(settings.MONGODB_URI, tlsCAFile=certifi.where())
-        print("MongoDB client connected.")
+        try:
+            # On Vercel, try with certifi first, fallback to standard if needed
+            client = AsyncIOMotorClient(
+                settings.MONGODB_URI, 
+                tlsCAFile=certifi.where(),
+                serverSelectionTimeoutMS=5000
+            )
+            # Ping to verify
+            await client.admin.command('ping')
+            print("MongoDB connected successfully.")
+        except Exception as e:
+            print(f"Primary MongoDB connection failed: {e}. Trying fallback...")
+            client = AsyncIOMotorClient(settings.MONGODB_URI, serverSelectionTimeoutMS=5000)
+            print("MongoDB connected with fallback.")
 
 async def close_db():
     global client
