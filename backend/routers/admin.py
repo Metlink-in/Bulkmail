@@ -7,7 +7,7 @@ from jose import jwt
 
 from backend.database import get_db
 from backend.middleware.auth_middleware import require_admin
-from backend.utils.helpers import hash_password, get_current_timestamp
+from backend.utils.helpers import hash_password, get_current_timestamp, json_safe
 from backend.config import settings
 
 router = APIRouter(tags=["admin"])
@@ -70,7 +70,7 @@ async def get_users(
             "active_jobs": active_jobs,
             "last_login": last_login
         })
-    return result
+    return json_safe(result)
 
 @router.get("/users/{user_id}")
 async def get_user_details(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
@@ -89,13 +89,13 @@ async def get_user_details(user_id: str, current_admin: Dict[str, Any] = Depends
     u.pop("_id")
     u.pop("hashed_password", None)
     
-    return {
+    return json_safe({
         "profile": u,
         "stats": {
             "total_sent": total_sent,
             "total_jobs": total_jobs
         }
-    }
+    })
 
 @router.post("/users")
 async def create_user(body: UserCreateAdmin, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
@@ -116,7 +116,7 @@ async def create_user(body: UserCreateAdmin, current_admin: Dict[str, Any] = Dep
     u_dict["id"] = str(res.inserted_id)
     u_dict.pop("_id", None)
     u_dict.pop("hashed_password", None)
-    return u_dict
+    return json_safe(u_dict)
 
 @router.put("/users/{user_id}")
 async def update_user(user_id: str, body: UserUpdateAdmin, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
@@ -137,7 +137,7 @@ async def update_user(user_id: str, body: UserUpdateAdmin, current_admin: Dict[s
     res["id"] = str(res["_id"])
     res.pop("_id", None)
     res.pop("hashed_password", None)
-    return res
+    return json_safe(res)
 
 @router.delete("/users/{user_id}")
 async def delete_user(request: Request, user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
@@ -231,7 +231,7 @@ async def get_system_stats(current_admin: Dict[str, Any] = Depends(require_admin
                 "sent_today": tu["sent_today"]
             })
             
-    return {
+    return json_safe({
         "total_users": total_users,
         "active_users": active_users,
         "new_users_today": new_today,
@@ -243,7 +243,7 @@ async def get_system_stats(current_admin: Dict[str, Any] = Depends(require_admin
         "total_schedules_active": active_schedules,
         "emails_per_hour_last_24h": hourly,
         "top_active_users": top_users
-    }
+    })
 
 @router.get("/logs")
 async def get_admin_logs(
@@ -285,7 +285,7 @@ async def get_admin_mail_jobs(
             j["user_name"] = u.get("name")
             j["user_email"] = u.get("email")
             
-    return jobs
+    return json_safe(jobs)
 
 @router.get("/mail-logs")
 async def get_admin_mail_logs(
@@ -335,7 +335,7 @@ async def get_user_settings_admin(user_id: str, current_admin: Dict[str, Any] = 
         else:
             creds["google_sheets_api_key"] = "••••••••"
             
-    return creds
+    return json_safe(creds)
 
 
 # --- Live Monitoring ---
@@ -384,7 +384,7 @@ async def get_live_monitoring(current_admin: Dict[str, Any] = Depends(require_ad
     ten_min_ago = now - timedelta(minutes=10)
     active_users = len(await db.audit_logs.distinct("user_id", {"timestamp": {"$gte": ten_min_ago}}))
     
-    return {
+    return json_safe({
         "timestamp": now.isoformat(),
         "running_jobs": running_jobs,
         "queued_jobs_count": queued_count,
@@ -392,7 +392,7 @@ async def get_live_monitoring(current_admin: Dict[str, Any] = Depends(require_ad
         "emails_sent_last_hour": sent_1h,
         "errors_last_hour": err_1h,
         "active_users_online": active_users
-    }
+    })
 
 @router.get("/users/{user_id}/impersonate")
 async def impersonate_user(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):

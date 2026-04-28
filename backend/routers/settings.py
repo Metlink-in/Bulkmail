@@ -11,7 +11,7 @@ import gspread
 
 from backend.database import get_db
 from backend.middleware.auth_middleware import require_user
-from backend.utils.helpers import encrypt_secret, decrypt_secret
+from backend.utils.helpers import encrypt_secret, decrypt_secret, json_safe
 from backend.config import settings
 
 router = APIRouter(tags=["settings"])
@@ -38,6 +38,10 @@ class SettingsBody(BaseModel):
     google_sheets_api_key: Optional[str] = None
     default_sheet_id: Optional[str] = None
 
+class SheetsTestBody(BaseModel):
+    api_key: str
+    sheet_id: str
+
 class SenderProfile(BaseModel):
     name: str
     smtp_host: str
@@ -57,14 +61,15 @@ class SenderProfile(BaseModel):
 @router.get("/profiles")
 async def get_sender_profiles(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    cursor = db.user_credentials.find({"user_id": user_id})
+    # Filter for documents that have a 'name' field, which identifies them as Sender Profiles
+    cursor = db.user_credentials.find({"user_id": user_id, "name": {"$exists": True}})
     profiles = await cursor.to_list(length=100)
     for p in profiles:
         p["id"] = str(p.pop("_id"))
         p.pop("user_id", None)
         if p.get("smtp_password"): p["smtp_password"] = "••••••••"
         if p.get("imap_password"): p["imap_password"] = "••••••••"
-    return profiles
+    return json_safe(profiles)
 
 @router.post("/profiles")
 async def add_sender_profile(body: SenderProfile, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -83,7 +88,7 @@ async def add_sender_profile(body: SenderProfile, current_user: Dict[str, Any] =
         await db.user_credentials.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
         
     result = await db.user_credentials.insert_one(data)
-    return {"id": str(result.inserted_id), "message": "Profile added"}
+    return json_safe({"id": str(result.inserted_id), "message": "Profile added"})
 
 @router.put("/profiles/{profile_id}")
 async def update_sender_profile(profile_id: str, body: SenderProfile, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -130,10 +135,8 @@ async def delete_sender_profile(profile_id: str, current_user: Dict[str, Any] = 
 @router.get("")
 async def get_settings(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    # Return general settings (like Gemini key, sheets key) which are shared
-    creds = await db.user_credentials.find_one({"user_id": user_id, "is_default": True})
-    if not creds:
-        creds = await db.user_credentials.find_one({"user_id": user_id})
+    # Use a separate collection for global app settings to avoid conflict with sender profiles
+    creds = await db.user_settings.find_one({"user_id": user_id})
     
     if not creds:
         return {}
@@ -141,15 +144,12 @@ async def get_settings(current_user: Dict[str, Any] = Depends(require_user), db 
     creds.pop("_id", None)
     creds.pop("user_id", None)
     
-    # Mask passwords
-    if creds.get("smtp_password"):
-        creds["smtp_password"] = "••••••••"
-    if creds.get("imap_password"):
-        creds["imap_password"] = "••••••••"
-    if creds.get("gemini_api_key"):
-        creds["gemini_api_key"] = "••••••••"
-        
-    return creds
+    # Mask passwords/keys
+    for k in ["smtp_password", "imap_password", "gemini_api_key", "google_sheets_api_key"]:
+        if creds.get(k):
+            creds[k] = "••••••••"
+            
+    return json_safe(creds)
 
 @router.post("")
 async def update_settings(body: SettingsBody, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -161,22 +161,14 @@ async def update_settings(body: SettingsBody, current_user: Dict[str, Any] = Dep
         
     # Encrypt secrets
     key = settings.ENCRYPTION_KEY
-    if "smtp_password" in data and data["smtp_password"] != "••••••••":
-        data["smtp_password"] = encrypt_secret(data["smtp_password"], key)
-    elif "smtp_password" in data and data["smtp_password"] == "••••••••":
-        data.pop("smtp_password")
+    for k in ["smtp_password", "imap_password", "gemini_api_key", "google_sheets_api_key"]:
+        if k in data:
+            if data[k] == "••••••••":
+                data.pop(k)
+            else:
+                data[k] = encrypt_secret(data[k], key)
         
-    if "imap_password" in data and data["imap_password"] != "••••••••":
-        data["imap_password"] = encrypt_secret(data["imap_password"], key)
-    elif "imap_password" in data and data["imap_password"] == "••••••••":
-        data.pop("imap_password")
-        
-    if "gemini_api_key" in data and data["gemini_api_key"] != "••••••••":
-        data["gemini_api_key"] = encrypt_secret(data["gemini_api_key"], key)
-    elif "gemini_api_key" in data and data["gemini_api_key"] == "••••••••":
-        data.pop("gemini_api_key")
-        
-    await db.user_credentials.update_one(
+    await db.user_settings.update_one(
         {"user_id": user_id},
         {"$set": data},
         upsert=True
@@ -186,27 +178,36 @@ async def update_settings(body: SettingsBody, current_user: Dict[str, Any] = Dep
 @router.post("/smtp/test")
 async def test_smtp(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    creds = await db.user_credentials.find_one({"user_id": user_id})
+    # Prefer the marked-default SMTP profile
+    creds = await db.user_credentials.find_one({"user_id": user_id, "is_default": True})
+    if not creds:
+        creds = await db.user_credentials.find_one({"user_id": user_id})
     if not creds or not creds.get("smtp_host"):
-        raise HTTPException(status_code=400, detail="SMTP settings not configured")
+        raise HTTPException(status_code=400, detail="SMTP settings not configured. Add a Sender Profile first.")
         
     host = creds["smtp_host"]
     port = creds["smtp_port"]
     user = creds["smtp_user"]
-    password = decrypt_secret(creds["smtp_password"], settings.ENCRYPTION_KEY)
+    try:
+        password = decrypt_secret(creds["smtp_password"], settings.ENCRYPTION_KEY)
+    except Exception:
+        password = creds["smtp_password"]  # Fallback: use as-is if not encrypted
     use_tls = creds.get("use_tls", False)
     use_ssl = creds.get("use_ssl", False)
     
     start_time = time.time()
     try:
-        smtp_client = aiosmtplib.SMTP(hostname=host, port=port, use_tls=use_ssl)
+        # Port 465 = implicit SSL; port 587 = STARTTLS
+        is_ssl = (port == 465 or use_ssl)
+        needs_starttls = (not is_ssl) and (use_tls or port == 587)
+        smtp_client = aiosmtplib.SMTP(hostname=host, port=port, use_tls=is_ssl, timeout=30)
         await smtp_client.connect()
-        if use_tls:
+        if needs_starttls:
             await smtp_client.starttls()
         await smtp_client.login(user, password)
         await smtp_client.quit()
         latency = int((time.time() - start_time) * 1000)
-        return {"success": True, "message": "SMTP connection successful", "latency_ms": latency}
+        return {"success": True, "message": f"SMTP connection to {host}:{port} successful", "latency_ms": latency}
     except Exception as e:
         return {"success": False, "message": str(e), "latency_ms": 0}
 
@@ -239,7 +240,7 @@ async def test_imap(current_user: Dict[str, Any] = Depends(require_user), db = D
 @router.post("/ai/test")
 async def test_ai(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    creds = await db.user_credentials.find_one({"user_id": user_id})
+    creds = await db.user_settings.find_one({"user_id": user_id})
     api_key = creds.get("gemini_api_key") if creds else None
     
     if api_key:

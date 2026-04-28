@@ -33,14 +33,27 @@ async def get_user_smtp_settings(db, user_id: str, profile_id: str = None) -> di
     else:
         creds = await db.user_credentials.find_one({"user_id": user_id, "is_default": True})
         if not creds:
-            creds = await db.user_credentials.find_one({"user_id": user_id})
+            # Fallback to any profile if no default is set
+            creds = await db.user_credentials.find_one({"user_id": user_id, "name": {"$exists": True}})
             
-    if not creds or not creds.get("smtp_host"):
+    if not creds:
         return {}
+    
+    # Merge with global settings from user_settings collection
+    global_settings = await db.user_settings.find_one({"user_id": user_id})
+    if global_settings:
+        # Don't overwrite profile-specific SMTP/IMAP settings with global ones if they exist in global
+        # but prioritize global settings for things like delay_seconds and daily_limit
+        for key in ["email_delay_seconds", "daily_send_limit", "unsubscribe_footer", "gemini_api_key", "google_sheets_api_key"]:
+            if global_settings.get(key) is not None:
+                creds[key] = global_settings[key]
     
     password = creds.get("smtp_password")
     if password:
-        creds["smtp_password_decrypted"] = decrypt_secret(password, settings.ENCRYPTION_KEY)
+        try:
+            creds["smtp_password_decrypted"] = decrypt_secret(password, settings.ENCRYPTION_KEY)
+        except Exception:
+            creds["smtp_password_decrypted"] = password
     
     return creds
 
@@ -56,7 +69,14 @@ async def build_email_message(
     personalization_data: dict,
     attachments: list
 ) -> MIMEMultipart:
-    msg = MIMEMultipart('alternative')
+    # Use 'mixed' container when there are attachments; nest 'alternative' inside
+    has_attachments = bool(attachments)
+    if has_attachments:
+        msg = MIMEMultipart('mixed')
+        alt_part = MIMEMultipart('alternative')
+    else:
+        msg = MIMEMultipart('alternative')
+        alt_part = msg
     
     # Replace tokens
     tokens = {
@@ -83,23 +103,27 @@ async def build_email_message(
         msg['Reply-To'] = reply_to
         
     msg['Message-ID'] = f"<{uuid.uuid4()}@{message_id_domain}>"
-    msg['X-Mailer'] = "BulkReach Pro Engine"
+    msg['X-Mailer'] = "BulkReach Pro Engine/1.0"
+    msg['Precedence'] = "bulk"
+    msg['List-Unsubscribe'] = f"<mailto:unsubscribe@{message_id_domain}>"
     
     # Text part
     import re
     text_body = re.sub('<[^<]+?>', '', s_body)
-    msg.attach(MIMEText(text_body, 'plain'))
-    msg.attach(MIMEText(s_body, 'html'))
+    alt_part.attach(MIMEText(text_body, 'plain'))
+    alt_part.attach(MIMEText(s_body, 'html'))
     
-    for att in attachments:
-        filename = att.get('filename')
-        content = att.get('content_base64')
-        if filename and content:
-            part = MIMEBase('application', 'octet-stream')
-            part.set_payload(base64.b64decode(content))
-            encoders.encode_base64(part)
-            part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
-            msg.attach(part)
+    if has_attachments:
+        msg.attach(alt_part)
+        for att in attachments:
+            filename = att.get('filename')
+            content = att.get('content_base64')
+            if filename and content:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(base64.b64decode(content))
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+                msg.attach(part)
             
     return msg
 
@@ -137,8 +161,8 @@ async def send_single_email(smtp_settings: dict, message: MIMEMultipart, to_emai
         )
         await smtp_client.connect()
         
-        # If not SSL but we want TLS (STARTTLS), upgrade now
-        if not is_ssl and use_tls:
+        # Auto-detect STARTTLS: port 587 always requires it, or if use_tls is set
+        if not is_ssl and (use_tls or port == 587):
             await smtp_client.starttls()
             
         await smtp_client.login(user, password)
@@ -183,8 +207,16 @@ async def process_mail_job(db, job_id: str):
         c = await db.contacts.find_one({"_id": cid})
         if c: contacts.append(c)
         
-    # unique contacts
-    contacts = {c["_id"]: c for c in contacts}.values()
+    # unique contacts, convert to list for reuse and len()
+    contacts = list({c["_id"]: c for c in contacts}.values())
+    
+    # Exit early if no contacts found for this job
+    if not contacts:
+        await db.mail_jobs.update_one(
+            {"_id": job_id},
+            {"$set": {"status": "completed", "completed_at": get_current_timestamp(), "error": "No contacts found"}}
+        )
+        return
     
     # Get already sent
     logs = await db.mail_logs.find({"job_id": job_id}).to_list(None)
@@ -213,7 +245,23 @@ async def process_mail_job(db, job_id: str):
             "status": "sent",
             "sent_at": {"$gte": start_of_day}
         })
-        if today_sent >= daily_limit:
+        # Warmup Mode logic: if enabled, max 20 emails/day first week, 50/day second week, then normal limits
+        if smtp_settings.get("warmup_mode"):
+            now = datetime.now(timezone.utc)
+            created_at = smtp_settings.get("created_at") or now
+            days_old = (now - created_at).days
+            if days_old < 7:
+                warmup_limit = 20
+            elif days_old < 14:
+                warmup_limit = 50
+            else:
+                warmup_limit = daily_limit
+            
+            effective_limit = min(daily_limit, warmup_limit)
+        else:
+            effective_limit = daily_limit
+
+        if today_sent >= effective_limit:
             await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "paused", "updated_at": get_current_timestamp()}})
             break
             
@@ -308,7 +356,16 @@ async def get_job_status(db, user_id, job_id) -> dict:
     
     started_at = job.get("updated_at")
     from backend.utils.helpers import get_current_timestamp
-    elapsed = (get_current_timestamp() - started_at).total_seconds() if started_at else 0
+    from datetime import timezone as _tz
+    elapsed = 0
+    if started_at:
+        try:
+            # Coerce naive datetimes from MongoDB to UTC-aware
+            if hasattr(started_at, 'tzinfo') and started_at.tzinfo is None:
+                started_at = started_at.replace(tzinfo=_tz.utc)
+            elapsed = (get_current_timestamp() - started_at).total_seconds()
+        except Exception:
+            elapsed = 0
     
     return {
         "status": job["status"],

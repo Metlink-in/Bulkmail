@@ -15,6 +15,19 @@ def generate_token(length: int = 32) -> str:
 def get_current_timestamp() -> datetime:
     return datetime.now(timezone.utc)
 
+def json_safe(data):
+    """Recursively convert ObjectIds and datetimes to JSON-serializable formats."""
+    from bson import ObjectId
+    if isinstance(data, list):
+        return [json_safe(item) for item in data]
+    if isinstance(data, dict):
+        return {k: json_safe(v) for k, v in data.items()}
+    if isinstance(data, ObjectId):
+        return str(data)
+    if isinstance(data, datetime):
+        return data.isoformat()
+    return data
+
 def hash_password(plain: str) -> str:
     return pwd_context.hash(plain)
 

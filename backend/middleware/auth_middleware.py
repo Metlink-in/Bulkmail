@@ -32,7 +32,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncIOMotor
     if await is_token_revoked(db, jti):
         raise credentials_exception
         
-    user = await db.users.find_one({"_id": parse_object_id(user_id)})
+    user = await db.users.find_one({"_id": user_id})
+    if not user:
+        user = await db.users.find_one({"_id": parse_object_id(user_id)})
     if not user:
         user = await db.users.find_one({"email": user_id})
         

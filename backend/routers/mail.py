@@ -11,7 +11,7 @@ from backend.services.mail_service import (
     send_single_email, build_email_message, get_user_smtp_settings
 )
 from backend.services.scheduler_service import schedule_job
-from backend.utils.helpers import get_current_timestamp
+from backend.utils.helpers import get_current_timestamp, json_safe
 
 router = APIRouter(tags=["mail"])
 
@@ -67,12 +67,12 @@ async def create_mail_job(body: MailJobCreate, current_user: Dict[str, Any] = De
         
     await schedule_job(db, job_id, scheduled_at)
     
-    return {
+    return json_safe({
         "job_id": job_id,
         "status": "queued",
         "total_recipients": total,
         "scheduled_at": scheduled_at
-    }
+    })
 
 @router.get("/jobs")
 async def get_mail_jobs(page: int = 1, limit: int = 50, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -80,7 +80,7 @@ async def get_mail_jobs(page: int = 1, limit: int = 50, current_user: Dict[str, 
     skip = (page - 1) * limit
     cursor = db.mail_jobs.find({"user_id": user_id}).sort("created_at", -1).skip(skip).limit(limit)
     jobs = await cursor.to_list(length=limit)
-    return jobs
+    return json_safe(jobs)
 
 @router.get("/jobs/{job_id}")
 async def get_mail_job_details(job_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -91,12 +91,12 @@ async def get_mail_job_details(job_id: str, current_user: Dict[str, Any] = Depen
         
     logs = await db.mail_logs.find({"job_id": job_id, "user_id": user_id}).sort("sent_at", -1).limit(20).to_list(None)
     job["recent_logs"] = logs
-    return job
+    return json_safe(job)
 
 @router.get("/jobs/{job_id}/status")
 async def poll_job_status(job_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    return await get_job_status(db, user_id, job_id)
+    return json_safe(await get_job_status(db, user_id, job_id))
 
 @router.post("/jobs/{job_id}/pause")
 async def pause_job_route(job_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -127,6 +127,9 @@ async def test_single_mail(body: TestMailRequest, current_user: Dict[str, Any] =
     user_id = str(current_user["_id"])
     
     template = await db.mail_templates.find_one({"_id": body.template_id, "user_id": user_id})
+    if not template:
+        # Also check global/seeded templates
+        template = await db.mail_templates.find_one({"_id": body.template_id, "is_global": True})
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
         
@@ -168,4 +171,4 @@ async def get_mail_logs(
     skip = (page - 1) * limit
     cursor = db.mail_logs.find(query).sort("sent_at", -1).skip(skip).limit(limit)
     logs = await cursor.to_list(length=limit)
-    return logs
+    return json_safe(logs)
