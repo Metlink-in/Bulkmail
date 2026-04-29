@@ -45,7 +45,7 @@ async def init_db(db: AsyncIOMotorDatabase):
     await db.users.create_index("email", unique=True)
     # 2. user_credentials (changed to allow multiple profiles)
     await db.user_credentials.create_index("user_id")
-    await db.user_credentials.create_index([("user_id", 1), ("smtp_user", 1)], unique=True)
+    await db.user_credentials.create_index([("user_id", 1), ("smtp_user", 1)], unique=True, sparse=True)
     # 3. mail_templates
     await db.mail_templates.create_index("user_id")
     # 4. contact_lists
@@ -67,14 +67,19 @@ async def init_db(db: AsyncIOMotorDatabase):
     print("Database initialized with all 10 indexes.")
 
 async def seed_admin(db: AsyncIOMotorDatabase):
-    admin_email = getattr(settings, "ADMIN_EMAIL", "jiteshbawaskar05@gmail.com")
-    admin_password = getattr(settings, "ADMIN_PASSWORD", "Jitesh001@")
-    admin_name = getattr(settings, "ADMIN_NAME", "Jitesh Bawaskar")
-    
+    admin_email = settings.ADMIN_EMAIL
+    admin_password = settings.ADMIN_PASSWORD
+    admin_name = settings.ADMIN_NAME or "Admin"
+
+    if not admin_email or not admin_password:
+        print("ADMIN_EMAIL or ADMIN_PASSWORD not configured — skipping admin seed.")
+        return
+
+    hashed_password = pwd_context.hash(admin_password)
     admin_exists = await db.users.find_one({"email": admin_email})
+
     if not admin_exists:
         import uuid
-        hashed_password = pwd_context.hash(admin_password)
         admin_user = {
             "_id": str(uuid.uuid4()),
             "email": admin_email,
@@ -86,6 +91,16 @@ async def seed_admin(db: AsyncIOMotorDatabase):
             "created_at": datetime.now(timezone.utc)
         }
         await db.users.insert_one(admin_user)
-        print(f"Admin user ({admin_email}) seeded successfully.")
+        print(f"Admin user ({admin_email}) created.")
     else:
-        print(f"Admin user ({admin_email}) already exists.")
+        # Always sync password + role from env so changing ADMIN_PASSWORD takes effect immediately
+        await db.users.update_one(
+            {"email": admin_email},
+            {"$set": {
+                "hashed_password": hashed_password,
+                "role": "admin",
+                "is_active": True,
+                "name": admin_name,
+            }}
+        )
+        print(f"Admin user ({admin_email}) password synced from environment.")
