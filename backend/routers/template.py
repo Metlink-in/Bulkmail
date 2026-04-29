@@ -106,6 +106,16 @@ async def delete_template(template_id: str, current_user: Dict[str, Any] = Depen
         raise HTTPException(status_code=404, detail="Template not found")
     return {"message": "Template deleted"}
 
+@router.delete("/bulk/cleanup-auto")
+async def cleanup_auto_templates(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    """Delete all auto-saved 'Campaign ...' templates for the current user."""
+    user_id = str(current_user["_id"])
+    res = await db.mail_templates.delete_many({
+        "user_id": user_id,
+        "name": {"$regex": r"^Campaign \d", "$options": "i"}
+    })
+    return {"message": f"Deleted {res.deleted_count} auto-saved campaign template(s)"}
+
 @router.post("/{template_id}/duplicate")
 async def duplicate_template(template_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])

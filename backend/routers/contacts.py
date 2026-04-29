@@ -4,14 +4,26 @@ from typing import Dict, Any, List, Optional
 from backend.database import get_db
 from backend.middleware.auth_middleware import require_user
 from backend.services.contact_service import (
-    parse_csv, import_from_sheets, save_contact_list, 
+    parse_csv, import_from_sheets, save_contact_list,
     get_contact_lists, get_contact_list, update_contact, delete_contact_list
 )
 from backend.services.validation_service import validate_email_list
+from backend.utils.helpers import json_safe
 import uuid
 from datetime import datetime, timezone
 
 router = APIRouter(tags=["contacts"])
+
+def _norm(doc):
+    """Rename _id → id for consistent API responses."""
+    if isinstance(doc, list):
+        return [_norm(d) for d in doc]
+    if isinstance(doc, dict):
+        d = json_safe(dict(doc))
+        if "_id" in d:
+            d["id"] = d.pop("_id")
+        return d
+    return doc
 
 class ContactListCreateRequest(BaseModel):
     name: str
@@ -29,7 +41,7 @@ class ValidateEmailsRequest(BaseModel):
 async def list_contact_lists(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
     lists = await get_contact_lists(db, user_id)
-    return lists
+    return _norm(lists)
 
 @router.post("/lists")
 async def create_contact_list(body: ContactListCreateRequest, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -38,7 +50,7 @@ async def create_contact_list(body: ContactListCreateRequest, current_user: Dict
     if body.description:
         await db.contact_lists.update_one({"_id": result["_id"]}, {"$set": {"description": body.description}})
         result["description"] = body.description
-    return result
+    return _norm(result)
 
 @router.get("/{list_id}")
 async def get_single_list(list_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -46,10 +58,10 @@ async def get_single_list(list_id: str, current_user: Dict[str, Any] = Depends(r
     c_list = await get_contact_list(db, user_id, list_id)
     if not c_list:
         raise HTTPException(status_code=404, detail="Contact list not found")
-        
+
     contacts = await db.contacts.find({"list_id": list_id, "user_id": user_id}).to_list(length=10000)
     c_list["contacts"] = contacts
-    return c_list
+    return _norm(c_list)
 
 @router.put("/{list_id}")
 async def update_list_name(list_id: str, body: ContactListCreateRequest, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
@@ -158,21 +170,21 @@ async def add_single_contact(list_id: str, data: Dict[str, Any], current_user: D
     }
     
     await db.contacts.insert_one(contact)
-    return contact
+    return _norm(contact)
 
 @router.put("/{list_id}/contacts/{contact_id}")
 async def update_single_contact(list_id: str, contact_id: str, data: Dict[str, Any], current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    
+
     if "email" in data:
         from backend.services.validation_service import validate_email
         validation = await validate_email(data["email"])
         data["email_status"] = validation["status"]
-        
+
     updated = await update_contact(db, user_id, contact_id, data)
     if not updated:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return updated
+    return _norm(updated)
 
 @router.post("/import/manual")
 async def import_manual(

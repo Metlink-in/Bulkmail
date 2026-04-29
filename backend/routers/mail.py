@@ -34,11 +34,25 @@ class TestMailRequest(BaseModel):
 @router.post("/jobs")
 async def create_mail_job(body: MailJobCreate, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
+
+    # Validate template exists and belongs to this user (or is global)
+    template = await db.mail_templates.find_one({"_id": body.template_id, "user_id": user_id})
+    if not template:
+        template = await db.mail_templates.find_one({"_id": body.template_id, "is_global": True})
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Validate contact list exists if provided
+    if body.contact_list_id:
+        c_list = await db.contact_lists.find_one({"_id": body.contact_list_id, "user_id": user_id})
+        if not c_list:
+            raise HTTPException(status_code=404, detail="Contact list not found")
+
     job_id = str(uuid.uuid4())
-    
+
     now = get_current_timestamp()
     scheduled_at = body.schedule_at if body.schedule_at else now + timedelta(seconds=5)
-    
+
     job_doc = {
         "_id": job_id,
         "user_id": user_id,
@@ -141,7 +155,7 @@ async def test_single_mail(body: TestMailRequest, current_user: Dict[str, Any] =
         
     msg = await build_email_message(
         to_email=body.to_email,
-        to_name="Test User",
+        to_name=body.to_email.split("@")[0],
         subject=template["subject"],
         html_body=template["html_body"],
         from_name=smtp.get("from_name", ""),

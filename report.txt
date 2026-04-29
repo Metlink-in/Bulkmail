@@ -1,8 +1,0 @@
-[PASS] Health check passed
-[PASS] User registration passed
-[PASS] Update settings passed
-[PASS] Create contact list passed
-[PASS] Add contact passed
-[PASS] Create template passed
-[PASS] Admin login passed
-[PASS] Admin stats passed

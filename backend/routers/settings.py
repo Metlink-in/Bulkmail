@@ -10,7 +10,7 @@ import google.generativeai as genai
 import gspread
 
 from backend.database import get_db
-from backend.middleware.auth_middleware import require_user
+from backend.middleware.auth_middleware import require_user, require_admin
 from backend.utils.helpers import encrypt_secret, decrypt_secret, json_safe
 from backend.config import settings
 
@@ -41,6 +41,10 @@ class SettingsBody(BaseModel):
 class SheetsTestBody(BaseModel):
     api_key: str
     sheet_id: str
+
+class SmtpTestRequest(BaseModel):
+    profile_id: Optional[str] = None
+    to_email: Optional[str] = None   # if set, sends a real test email
 
 class SenderProfile(BaseModel):
     name: str
@@ -132,6 +136,62 @@ async def delete_sender_profile(profile_id: str, current_user: Dict[str, Any] = 
     await db.user_credentials.delete_one({"_id": oid, "user_id": user_id})
     return {"message": "Profile deleted"}
 
+@router.get("/env-smtp")
+async def get_env_smtp(current_user: Dict[str, Any] = Depends(require_admin)):
+    """Return what SMTP vars are configured in .env (password masked)."""
+    configured = bool(settings.SMTP_HOST and settings.SMTP_USER)
+    return {
+        "configured": configured,
+        "smtp_host": settings.SMTP_HOST or "",
+        "smtp_port": settings.SMTP_PORT or 587,
+        "smtp_user": settings.SMTP_USER or "",
+        "smtp_password": "••••••••" if settings.SMTP_PASSWORD else "",
+        "use_tls": settings.SMTP_USE_TLS,
+        "use_ssl": settings.SMTP_USE_SSL,
+        "from_name": settings.SMTP_FROM_NAME or "",
+        "reply_to_email": settings.SMTP_REPLY_TO or "",
+    }
+
+@router.post("/profiles/from-env")
+async def apply_env_smtp(current_user: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    """Create or update the user's 'Default (.env)' sender profile from env vars."""
+    if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        raise HTTPException(status_code=400, detail="SMTP_HOST, SMTP_USER and SMTP_PASSWORD must all be set in .env")
+
+    user_id = str(current_user["_id"])
+    key = settings.ENCRYPTION_KEY
+    enc_password = encrypt_secret(settings.SMTP_PASSWORD, key)
+
+    data = {
+        "name": "Default (.env)",
+        "smtp_host": settings.SMTP_HOST,
+        "smtp_port": settings.SMTP_PORT or 587,
+        "smtp_user": settings.SMTP_USER,
+        "smtp_password": enc_password,
+        "use_tls": settings.SMTP_USE_TLS,
+        "use_ssl": settings.SMTP_USE_SSL,
+        "from_name": settings.SMTP_FROM_NAME or settings.SMTP_USER,
+        "reply_to_email": settings.SMTP_REPLY_TO or settings.SMTP_USER,
+        "imap_host": None,
+        "imap_port": 993,
+        "imap_user": None,
+        "imap_password": None,
+        "user_id": user_id,
+        "is_default": True,
+    }
+
+    # Clear existing default
+    await db.user_credentials.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
+
+    # Upsert by name so clicking the button twice doesn't create duplicates
+    existing = await db.user_credentials.find_one({"user_id": user_id, "name": "Default (.env)"})
+    if existing:
+        await db.user_credentials.update_one({"_id": existing["_id"]}, {"$set": data})
+        return {"message": "Default (.env) profile updated from environment variables"}
+    else:
+        await db.user_credentials.insert_one(data)
+        return {"message": "Default (.env) profile created from environment variables"}
+
 @router.get("")
 async def get_settings(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
@@ -176,12 +236,22 @@ async def update_settings(body: SettingsBody, current_user: Dict[str, Any] = Dep
     return {"message": "Settings updated successfully"}
 
 @router.post("/smtp/test")
-async def test_smtp(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+async def test_smtp(body: SmtpTestRequest = SmtpTestRequest(), current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
-    # Prefer the marked-default SMTP profile
-    creds = await db.user_credentials.find_one({"user_id": user_id, "is_default": True})
-    if not creds:
-        creds = await db.user_credentials.find_one({"user_id": user_id})
+    from bson import ObjectId
+
+    if body.profile_id:
+        # Test a specific profile by id
+        try:
+            oid = ObjectId(body.profile_id)
+        except Exception:
+            oid = body.profile_id
+        creds = await db.user_credentials.find_one({"_id": oid, "user_id": user_id})
+    else:
+        creds = await db.user_credentials.find_one({"user_id": user_id, "is_default": True, "name": {"$exists": True}})
+        if not creds:
+            creds = await db.user_credentials.find_one({"user_id": user_id, "name": {"$exists": True}})
+
     if not creds or not creds.get("smtp_host"):
         raise HTTPException(status_code=400, detail="SMTP settings not configured. Add a Sender Profile first.")
         
@@ -197,7 +267,6 @@ async def test_smtp(current_user: Dict[str, Any] = Depends(require_user), db = D
     
     start_time = time.time()
     try:
-        # Port 465 = implicit SSL; port 587 = STARTTLS
         is_ssl = (port == 465 or use_ssl)
         needs_starttls = (not is_ssl) and (use_tls or port == 587)
         smtp_client = aiosmtplib.SMTP(hostname=host, port=port, use_tls=is_ssl, timeout=30)
@@ -205,6 +274,28 @@ async def test_smtp(current_user: Dict[str, Any] = Depends(require_user), db = D
         if needs_starttls:
             await smtp_client.starttls()
         await smtp_client.login(user, password)
+
+        # Send a real test email if to_email was supplied
+        if body.to_email:
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = "✅ BulkReach Pro — SMTP Test"
+            msg["From"] = f"{creds.get('from_name', user)} <{user}>"
+            msg["To"] = body.to_email
+            html = (
+                "<div style='font-family:sans-serif;max-width:480px'>"
+                "<h2 style='color:#6366f1'>SMTP test successful ✅</h2>"
+                f"<p>Your SMTP profile <strong>{creds.get('name','')}</strong> is working correctly.</p>"
+                f"<p style='color:#6b7280;font-size:13px'>Sent via {host}:{port}</p>"
+                "</div>"
+            )
+            msg.attach(MIMEText(html, "html"))
+            await smtp_client.send_message(msg)
+            await smtp_client.quit()
+            latency = int((time.time() - start_time) * 1000)
+            return {"success": True, "message": f"Test email sent to {body.to_email} via {host}:{port}", "latency_ms": latency}
+
         await smtp_client.quit()
         latency = int((time.time() - start_time) * 1000)
         return {"success": True, "message": f"SMTP connection to {host}:{port} successful", "latency_ms": latency}

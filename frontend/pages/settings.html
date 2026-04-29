@@ -10,358 +10,790 @@
     <style>
         .section-pane { display: none; }
         .section-pane.active { display: block; }
-        .settings-container { max-width: 800px; }
-        .test-result { margin-top: 12px; font-size: 13px; padding: 12px; border-radius: var(--radius-md); display: none; }
-        .test-success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid var(--success); }
-        .test-error { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid var(--danger); }
-        .password-input-group { position: relative; }
-        .toggle-password { position: absolute; right: 12px; top: 34px; cursor: pointer; color: var(--text-secondary); }
+        .settings-container { max-width: 860px; }
+
+        /* Test result banner */
+        .test-result {
+            margin-top: 12px; font-size: 13px; padding: 12px 16px;
+            border-radius: var(--radius-md); display: none;
+            align-items: center; gap: 8px;
+        }
+        .test-result.show { display: flex; }
+        .test-success { background: rgba(16,185,129,0.1); color: #059669; border: 1px solid rgba(16,185,129,0.3); }
+        .test-error   { background: rgba(239,68,68,0.1);  color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+        .test-loading { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+
+        /* Password wrapper */
+        .pw-wrap { position: relative; }
+        .pw-wrap .toggle-eye {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: var(--text-muted); font-size: 16px; user-select: none;
+            line-height: 1;
+        }
+        .pw-wrap input { padding-right: 36px; }
+
+        /* Profile cards */
+        .profile-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-primary);
+            transition: box-shadow 0.15s;
+        }
+        .profile-card:hover { box-shadow: var(--shadow-md); }
+        .profile-card-info { flex: 1; min-width: 0; }
+        .profile-card-name {
+            font-size: 15px; font-weight: 600; color: var(--text-primary);
+            display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+        }
+        .profile-card-sub { font-size: 12px; color: var(--text-secondary); }
+        .profile-card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+        /* IMAP collapsible */
+        .imap-toggle {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; font-weight: 600; color: var(--primary);
+            cursor: pointer; padding: 10px 0; user-select: none;
+        }
+        .imap-toggle svg { transition: transform 0.2s; }
+        .imap-toggle.open svg { transform: rotate(90deg); }
+        .imap-fields { display: none; }
+        .imap-fields.open { display: block; }
+
+        /* Divider */
+        .settings-divider {
+            border: none; border-top: 1px solid var(--border);
+            margin: 24px 0;
+        }
+
+        /* Section label */
+        .settings-section-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px;
+        }
+
+        /* Input helper text */
+        .input-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Modal overlay */
+        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45);
+            z-index:999; align-items:center; justify-content:center; }
+        .modal.active { display:flex; }
+        .modal-box {
+            background: var(--bg-primary); border-radius: var(--radius-xl);
+            width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto;
+            padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+        .modal-header h2 { font-size: 18px; font-weight: 700; }
+        .modal-close { cursor:pointer; color:var(--text-muted); font-size:22px; line-height:1; background:none; border:none; padding:0; }
+        .modal-close:hover { color:var(--text-primary); }
+        .modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .form-row-3 { display:grid; grid-template-columns:2fr 1fr 1fr; gap:16px; }
+
+        /* Loading spinner inline */
+        .btn-loading { opacity:0.7; pointer-events:none; }
     </style>
 </head>
 <body>
-    <div class="dashboard-layout">
-        <aside class="sidebar">
-            <div class="sidebar-logo">BulkReach Pro</div>
-            <nav class="sidebar-nav">
-                <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
-                <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
-                <a href="/pages/history.html" class="sidebar-nav-item">History</a>
-                <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
-                <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
-                <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
-                <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
-                <a href="/pages/settings.html" class="sidebar-nav-item active">Settings</a>
-                <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
-            </nav>
-        </aside>
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-logo">BulkReach Pro</div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+            <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+            <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+            <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
+            <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+            <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+            <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+            <a href="/pages/settings.html" class="sidebar-nav-item active">Settings</a>
+            <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+        </nav>
+    </aside>
 
-        <main class="main-content">
-            <header class="page-header">
-                <h1 class="page-title">Global Configuration</h1>
-                <div class="page-header-actions">
-                    <button id="saveAllBtn" class="btn btn-primary">Save All Settings</button>
-                </div>
-            </header>
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <h1 class="page-title">Settings</h1>
+                <p style="color:var(--text-secondary);font-size:13px;margin-top:2px;">
+                    Credentials and configuration stored securely — only visible to you.
+                </p>
+            </div>
+        </header>
 
-            <div class="settings-container">
-                <div class="tabs">
-                    <div class="tab-item active" data-target="profiles">Sender Profiles</div>
-                    <div class="tab-item" data-target="ai">AI & Gemini</div>
-                    <div class="tab-item" data-target="safety">Email Safety</div>
-                    <div class="tab-item" data-target="sheets">Google Sheets</div>
-                </div>
+        <div class="settings-container">
+            <div class="tabs" style="margin-bottom:0;">
+                <div class="tab-item active" data-target="profiles">Sender Profiles</div>
+                <div class="tab-item" data-target="ai">AI &amp; Gemini</div>
+                <div class="tab-item" data-target="safety">Email Safety</div>
+                <div class="tab-item" data-target="sheets">Google Sheets</div>
+            </div>
 
-                <div class="card">
-                    <!-- Profiles Tab -->
-                    <div id="profiles" class="section-pane active">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                            <div>
-                                <h3>Sender Profiles & Domains</h3>
-                                <p style="color:var(--text-secondary); font-size:13px;">Manage multiple SMTP accounts for different sending domains.</p>
-                            </div>
+            <div class="card" style="border-top-left-radius:0; margin-top:0;">
+
+                <!-- ══ SENDER PROFILES ══ -->
+                <div id="profiles" class="section-pane active">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+                        <div>
+                            <h3 style="margin-bottom:4px;">Sender Profiles &amp; SMTP Accounts</h3>
+                            <p style="color:var(--text-secondary);font-size:13px;">
+                                Each profile stores its own SMTP &amp; IMAP credentials, encrypted and private to your account.
+                            </p>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-shrink:0;margin-left:16px;">
+                            <button id="applyEnvBtn" onclick="applyEnvSmtp()" class="btn btn-secondary btn-sm" style="display:none;" title="Pre-fill SMTP from server .env (admin only)">
+                                ⚙️ Apply .env SMTP
+                            </button>
                             <button onclick="openProfileModal()" class="btn btn-primary btn-sm">+ Add Profile</button>
                         </div>
-                        
-                        <div id="profilesList" style="display:grid; gap:16px;">
-                            <!-- Profiles injected here -->
+                    </div>
+<div id="profilesList" style="display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;padding:40px;color:var(--text-secondary);">
+                            <div class="spinner" style="margin:0 auto 12px;"></div> Loading profiles…
                         </div>
                     </div>
+                </div>
 
-                    <!-- AI Tab -->
-                    <div id="ai" class="section-pane">
-                        <h3>Google Gemini AI</h3>
-                        <p style="color:var(--text-secondary); font-size:13px; margin-bottom:20px;">Power your email composition with advanced AI models.</p>
-                        <div class="input-group password-input-group">
-                            <label class="input-label">Gemini API Key</label>
-                            <input type="password" id="gemini_api_key" class="input">
-                            <span class="toggle-password" onclick="togglePass('gemini_api_key')">👁️</span>
+                <!-- ══ AI & GEMINI ══ -->
+                <div id="ai" class="section-pane">
+                    <h3 style="margin-bottom:4px;">Google Gemini AI</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:24px;">
+                        Power AI email composition. Your API key is encrypted at rest and never shared.
+                    </p>
+                    <div class="input-group">
+                        <label class="input-label">Gemini API Key</label>
+                        <div class="pw-wrap">
+                            <input type="password" id="gemini_api_key" class="input" placeholder="AIza…">
+                            <span class="toggle-eye" onclick="toggleEye('gemini_api_key')">👁</span>
                         </div>
-                        <button onclick="testConnection('ai')" class="btn btn-secondary btn-sm">Test AI Access</button>
-                        <div id="ai_test_res" class="test-result"></div>
+                        <p class="input-hint">Leave blank to keep the existing key. Enter a new value to replace it.</p>
                     </div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+                        <button id="saveAiBtn" onclick="saveAiKey()" class="btn btn-primary btn-sm">Save Key</button>
+                        <button onclick="testAI()" class="btn btn-secondary btn-sm">Test Connection</button>
+                    </div>
+                    <div id="ai_test_res" class="test-result"></div>
+                </div>
 
-                    <!-- Safety Tab -->
-                    <div id="safety" class="section-pane">
-                        <h3>Email Safety & Limits</h3>
+                <!-- ══ EMAIL SAFETY ══ -->
+                <div id="safety" class="section-pane">
+                    <h3 style="margin-bottom:4px;">Email Safety &amp; Sending Limits</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:24px;">
+                        Protect your sender reputation with smart throttling and footer defaults.
+                    </p>
+                    <div class="form-row">
                         <div class="input-group">
-                            <label class="input-label">Global Default Delay (Seconds)</label>
+                            <label class="input-label">Default Delay Between Emails (seconds)</label>
                             <input type="number" id="email_delay_seconds" class="input" value="300" min="60">
+                            <p class="input-hint">Minimum 60 s. Recommended: 180–600 s.</p>
                         </div>
                         <div class="input-group">
-                            <label class="input-label">Global Daily Limit</label>
-                            <input type="number" id="daily_send_limit" class="input" value="500">
-                        </div>
-                        <div class="input-group">
-                            <label class="input-label">Default Unsubscribe Footer (HTML)</label>
-                            <textarea id="unsubscribe_footer" class="input" rows="4"></textarea>
+                            <label class="input-label">Daily Send Limit</label>
+                            <input type="number" id="daily_send_limit" class="input" value="500" min="1">
+                            <p class="input-hint">Emails allowed per day across all jobs.</p>
                         </div>
                     </div>
-
-                    <!-- Sheets Tab -->
-                    <div id="sheets" class="section-pane">
-                        <h3>Google Sheets Integration</h3>
-                        <div class="input-group password-input-group">
-                            <label class="input-label">Service Account / API Key</label>
-                            <input type="password" id="google_sheets_api_key" class="input">
-                            <span class="toggle-password" onclick="togglePass('google_sheets_api_key')">👁️</span>
-                        </div>
-                        <div class="input-group">
-                            <label class="input-label">Default Spreadsheet ID</label>
-                            <input type="text" id="default_sheet_id" class="input">
-                        </div>
-                        <button onclick="testConnection('sheets')" class="btn btn-secondary btn-sm">Test Sheets Access</button>
-                        <div id="sheets_test_res" class="test-result"></div>
+                    <div class="input-group">
+                        <label class="input-label">Default Unsubscribe Footer (HTML)</label>
+                        <textarea id="unsubscribe_footer" class="input" rows="4"
+                            placeholder="<p style='font-size:11px;color:#999;'>Click <a href='{{unsubscribe_link}}'>here</a> to unsubscribe.</p>"></textarea>
                     </div>
+                    <button id="saveSafetyBtn" onclick="saveSafety()" class="btn btn-primary">Save Safety Settings</button>
+                    <div id="safety_save_res" class="test-result"></div>
                 </div>
-            </div>
-        </main>
-    </div>
 
-    <!-- Profile Modal -->
-    <div id="profileModal" class="modal">
-        <div class="modal-content" style="max-width:600px;">
+                <!-- ══ GOOGLE SHEETS ══ -->
+                <div id="sheets" class="section-pane">
+                    <h3 style="margin-bottom:4px;">Google Sheets Integration</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:24px;">
+                        Import contacts directly from Google Sheets. Your API key is encrypted at rest.
+                    </p>
+                    <div class="input-group">
+                        <label class="input-label">Google Sheets API Key</label>
+                        <div class="pw-wrap">
+                            <input type="password" id="google_sheets_api_key" class="input" placeholder="AIza…">
+                            <span class="toggle-eye" onclick="toggleEye('google_sheets_api_key')">👁</span>
+                        </div>
+                        <p class="input-hint">Leave blank to keep the existing key.</p>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Default Spreadsheet ID (optional)</label>
+                        <input type="text" id="default_sheet_id" class="input" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
+                        <p class="input-hint">The ID from your Google Sheets URL.</p>
+                    </div>
+
+                    <hr class="settings-divider">
+                    <div class="settings-section-label">Test Your Connection</div>
+                    <div class="form-row">
+                        <div class="input-group" style="margin-bottom:0;">
+                            <label class="input-label">API Key to Test</label>
+                            <div class="pw-wrap">
+                                <input type="password" id="test_sheets_key" class="input" placeholder="Paste key to test">
+                                <span class="toggle-eye" onclick="toggleEye('test_sheets_key')">👁</span>
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-bottom:0;">
+                            <label class="input-label">Sheet ID to Test</label>
+                            <input type="text" id="test_sheet_id" class="input" placeholder="Sheet ID">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:16px;">
+                        <button id="saveSheetBtn" onclick="saveSheets()" class="btn btn-primary btn-sm">Save Settings</button>
+                        <button onclick="testSheets()" class="btn btn-secondary btn-sm">Test Connection</button>
+                    </div>
+                    <div id="sheets_test_res" class="test-result"></div>
+                </div>
+
+            </div><!-- /.card -->
+        </div><!-- /.settings-container -->
+    </main>
+</div>
+
+<!-- ══════════════════ PROFILE MODAL ══════════════════ -->
+<div id="profileModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
             <h2 id="modalTitle">Add Sender Profile</h2>
-            <input type="hidden" id="p_id">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                <div class="input-group">
-                    <label class="input-label">Profile Name</label>
-                    <input type="text" id="p_name" class="input" placeholder="e.g. Sales Account">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">From Name</label>
-                    <input type="text" id="p_from_name" class="input" placeholder="John Doe">
-                </div>
+            <button class="modal-close" onclick="closeProfileModal()">×</button>
+        </div>
+
+        <input type="hidden" id="p_id">
+
+        <div class="settings-section-label">Identity</div>
+        <div class="form-row">
+            <div class="input-group">
+                <label class="input-label">Profile Name *</label>
+                <input type="text" id="p_name" class="input" placeholder="e.g. Sales Account">
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                <div class="input-group">
-                    <label class="input-label">SMTP User (Email)</label>
-                    <input type="email" id="p_smtp_user" class="input">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">Reply-To Email</label>
-                    <input type="email" id="p_reply_to" class="input">
-                </div>
-            </div>
-            <div class="input-group password-input-group">
-                <label class="input-label">SMTP Password</label>
-                <input type="password" id="p_smtp_password" class="input">
-                <span class="toggle-password" onclick="togglePass('p_smtp_password')">👁️</span>
-            </div>
-            <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px;">
-                <div class="input-group">
-                    <label class="input-label">SMTP Host</label>
-                    <input type="text" id="p_smtp_host" class="input" placeholder="smtp.gmail.com">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">SMTP Port</label>
-                    <input type="number" id="p_smtp_port" class="input" value="465">
-                </div>
-            </div>
-            <div style="display:flex; gap:16px; margin:16px 0;">
-                <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
-                    <input type="checkbox" id="p_use_ssl" checked> Use SSL/TLS
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
-                    <input type="checkbox" id="p_is_default"> Default Profile
-                </label>
-            </div>
-            <div class="modal-actions">
-                <button onclick="closeProfileModal()" class="btn btn-ghost">Cancel</button>
-                <button onclick="saveProfile()" class="btn btn-primary">Save Profile</button>
+            <div class="input-group">
+                <label class="input-label">From Name *</label>
+                <input type="text" id="p_from_name" class="input" placeholder="John Doe">
             </div>
         </div>
+        <div class="form-row">
+            <div class="input-group">
+                <label class="input-label">Sender Email (SMTP User) *</label>
+                <input type="email" id="p_smtp_user" class="input" placeholder="you@gmail.com">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Reply-To Email *</label>
+                <input type="email" id="p_reply_to" class="input" placeholder="replies@yourdomain.com">
+            </div>
+        </div>
+
+        <hr class="settings-divider">
+        <div class="settings-section-label">SMTP Configuration</div>
+        <div class="form-row-3">
+            <div class="input-group">
+                <label class="input-label">SMTP Host *</label>
+                <input type="text" id="p_smtp_host" class="input" placeholder="smtp.gmail.com">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Port *</label>
+                <input type="number" id="p_smtp_port" class="input" value="465">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Security</label>
+                <select id="p_security" class="input" onchange="onSecurityChange()">
+                    <option value="ssl">SSL / TLS (465)</option>
+                    <option value="tls">STARTTLS (587)</option>
+                    <option value="none">None</option>
+                </select>
+            </div>
+        </div>
+        <div class="input-group">
+            <label class="input-label">SMTP Password *</label>
+            <div class="pw-wrap">
+                <input type="password" id="p_smtp_password" class="input" placeholder="App password or SMTP password">
+                <span class="toggle-eye" onclick="toggleEye('p_smtp_password')">👁</span>
+            </div>
+            <p class="input-hint" id="p_smtp_password_hint" style="display:none;">
+                ✅ Password is saved. Leave this blank to keep it, or type a new one to replace it.
+            </p>
+        </div>
+
+        <!-- IMAP Section (collapsible) -->
+        <div class="imap-toggle" id="imapToggle" onclick="toggleImap()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            IMAP Settings <span style="font-weight:400;color:var(--text-muted);margin-left:4px;">(for reply tracking)</span>
+        </div>
+        <div id="imapFields" class="imap-fields">
+            <div class="form-row-3">
+                <div class="input-group">
+                    <label class="input-label">IMAP Host</label>
+                    <input type="text" id="p_imap_host" class="input" placeholder="imap.gmail.com">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">IMAP Port</label>
+                    <input type="number" id="p_imap_port" class="input" value="993">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">IMAP User</label>
+                    <input type="text" id="p_imap_user" class="input" placeholder="same as sender email">
+                </div>
+            </div>
+            <div class="input-group">
+                <label class="input-label">IMAP Password</label>
+                <div class="pw-wrap">
+                    <input type="password" id="p_imap_password" class="input" placeholder="App password">
+                    <span class="toggle-eye" onclick="toggleEye('p_imap_password')">👁</span>
+                </div>
+                <p class="input-hint" id="p_imap_password_hint" style="display:none;">Leave unchanged to keep current password.</p>
+            </div>
+        </div>
+
+        <hr class="settings-divider" style="margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-bottom:8px;">
+            <input type="checkbox" id="p_is_default"> Set as Default Profile
+        </label>
+
+        <!-- Per-profile SMTP test -->
+        <div style="display:flex;align-items:center;gap:10px;margin-top:16px;">
+            <input type="email" id="p_test_to" class="input" placeholder="Send test email to… (optional)"
+                style="flex:1;font-size:13px;">
+            <button onclick="testProfileSmtp()" class="btn btn-secondary btn-sm" style="white-space:nowrap;">
+                ▶ Test SMTP
+            </button>
+        </div>
+        <p class="input-hint" style="margin-top:4px;">Leave blank to just verify connection. Enter an address to send a real test email.</p>
+        <div id="modal_test_res" class="test-result" style="margin-top:8px;"></div>
+
+        <div class="modal-footer">
+            <button onclick="closeProfileModal()" class="btn btn-ghost">Cancel</button>
+            <button id="saveProfileBtn" onclick="saveProfile()" class="btn btn-primary">Save Profile</button>
+        </div>
     </div>
+</div>
 
-    <div id="toastContainer" class="toast-container"></div>
+<div id="toastContainer" class="toast-container"></div>
 
-    <script src="/js/api.js"></script>
-    <script src="/js/sidebar.js"></script>
-    <script>
-        requireAuth();
+<script src="/js/api.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+requireAuth();
 
-        let currentProfiles = [];
+let currentProfiles = [];
+let editingProfileId = null;
 
-        function showToast(msg, type="success") {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = msg;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+/* ── Utilities ─────────────────────────────────────── */
+function showToast(msg, type = 'success') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+function toggleEye(id) {
+    const el = document.getElementById(id);
+    if (el) el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function showResult(id, msg, type) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = `test-result show test-${type}`;
+    el.innerHTML = (type === 'loading' ? '⏳ ' : type === 'success' ? '✅ ' : '❌ ') + msg;
+}
+
+function setBtnLoading(id, loading) {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.toggle('btn-loading', loading);
+}
+
+/* ── Tab switching ──────────────────────────────────── */
+document.querySelectorAll('.tab-item').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.section-pane').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.target).classList.add('active');
+    });
+});
+
+/* ── IMAP toggle ────────────────────────────────────── */
+function toggleImap() {
+    document.getElementById('imapToggle').classList.toggle('open');
+    document.getElementById('imapFields').classList.toggle('open');
+}
+
+/* ── Security dropdown ──────────────────────────────── */
+function onSecurityChange() {
+    const sec = document.getElementById('p_security').value;
+    const portEl = document.getElementById('p_smtp_port');
+    const cur = parseInt(portEl.value);
+    if (sec === 'ssl' && cur !== 465) portEl.value = 465;
+    if (sec === 'tls' && cur !== 587) portEl.value = 587;
+    if (sec === 'none' && (cur === 465 || cur === 587)) portEl.value = 25;
+}
+
+/* ── Load profiles ──────────────────────────────────── */
+async function loadProfiles() {
+    try {
+        const profiles = await api.get('/settings/profiles');
+        currentProfiles = profiles;
+        const list = document.getElementById('profilesList');
+        list.innerHTML = '';
+
+        if (!profiles.length) {
+            list.innerHTML = `<div style="text-align:center;padding:48px 20px;color:var(--text-secondary);">
+                <div style="font-size:32px;margin-bottom:12px;">📭</div>
+                <strong>No sender profiles yet.</strong>
+                <p style="margin-top:8px;font-size:13px;">Add a profile to start sending emails.</p>
+            </div>`;
+            return;
         }
 
-        function togglePass(id) {
-            const el = document.getElementById(id);
-            el.type = el.type === 'password' ? 'text' : 'password';
-        }
-
-        // --- TAB SWITCHING ---
-        document.querySelectorAll('.tab-item').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.section-pane').forEach(p => p.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(tab.dataset.target).classList.add('active');
-            });
+        profiles.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'profile-card';
+            const hasImap = !!(p.imap_host);
+            card.innerHTML = `
+                <div class="profile-card-info">
+                    <div class="profile-card-name">
+                        ${escHtml(p.name)}
+                        ${p.is_default ? '<span class="badge badge-success">Default</span>' : ''}
+                        ${hasImap ? '<span class="badge badge-info" title="IMAP configured">IMAP ✓</span>' : ''}
+                    </div>
+                    <div class="profile-card-sub">
+                        ${escHtml(p.smtp_user || '—')} &nbsp;·&nbsp;
+                        ${escHtml(p.smtp_host || '—')}:${p.smtp_port || '—'} &nbsp;·&nbsp;
+                        From: <em>${escHtml(p.from_name || '—')}</em>
+                    </div>
+                </div>
+                <div class="profile-card-actions">
+                    <button onclick="testSingleProfile('${p.id}')" class="btn btn-sm btn-secondary" title="Test SMTP">Test</button>
+                    <button onclick="editProfile('${p.id}')" class="btn btn-sm btn-ghost">Edit</button>
+                    <button onclick="deleteProfile('${p.id}')" class="btn btn-sm btn-ghost" style="color:var(--danger);">Delete</button>
+                </div>`;
+            list.appendChild(card);
         });
+    } catch (err) {
+        showToast(err.message || 'Failed to load profiles', 'danger');
+    }
+}
 
-        // --- LOAD PROFILES ---
-        async function loadProfiles() {
-            try {
-                const profiles = await api.get('/settings/profiles');
-                currentProfiles = profiles;
-                const list = document.getElementById('profilesList');
-                list.innerHTML = '';
-                
-                if(profiles.length === 0) {
-                    list.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-secondary);">No sender profiles added yet.</div>';
-                    return;
-                }
+/* ── Load global settings ───────────────────────────── */
+async function loadSettings() {
+    try {
+        const s = await api.get('/settings');
+        const nums = ['email_delay_seconds', 'daily_send_limit'];
+        const texts = ['unsubscribe_footer', 'default_sheet_id'];
+        nums.forEach(f => { const el = document.getElementById(f); if (el && s[f] != null) el.value = s[f]; });
+        texts.forEach(f => { const el = document.getElementById(f); if (el && s[f]) el.value = s[f]; });
+        // Show masked placeholder if keys are saved
+        if (s.gemini_api_key) document.getElementById('gemini_api_key').placeholder = '•••• saved — enter new key to replace';
+        if (s.google_sheets_api_key) document.getElementById('google_sheets_api_key').placeholder = '•••• saved — enter new key to replace';
+    } catch (_) {}
+}
 
-                profiles.forEach(p => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.style.padding = '16px';
-                    card.style.display = 'flex';
-                    card.style.justifyContent = 'space-between';
-                    card.style.alignItems = 'center';
-                    card.innerHTML = `
-                        <div>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <strong style="font-size:16px;">${p.name}</strong>
-                                ${p.is_default ? '<span class="badge badge-success">Default</span>' : ''}
-                            </div>
-                            <div style="font-size:13px; color:var(--text-secondary); margin-top:4px;">
-                                ${p.smtp_user} (${p.smtp_host}:${p.smtp_port})
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:8px;">
-                            <button onclick="editProfile('${p.id}')" class="btn btn-sm btn-ghost">Edit</button>
-                            <button onclick="deleteProfile('${p.id}')" class="btn btn-sm btn-ghost" style="color:var(--danger);">Delete</button>
-                        </div>
-                    `;
-                    list.appendChild(card);
-                });
-            } catch (err) { showToast(err.message, "danger"); }
+/* ── Modal helpers ──────────────────────────────────── */
+function openProfileModal(id = null) {
+    editingProfileId = id;
+    const modal = document.getElementById('profileModal');
+    modal.classList.add('active');
+
+    // Reset test result
+    const res = document.getElementById('modal_test_res');
+    res.className = 'test-result'; res.innerHTML = '';
+
+    if (id) {
+        const p = currentProfiles.find(x => x.id === id);
+        if (!p) return;
+        document.getElementById('modalTitle').textContent = 'Edit Sender Profile';
+        document.getElementById('p_id').value = p.id;
+        document.getElementById('p_name').value = p.name || '';
+        document.getElementById('p_from_name').value = p.from_name || '';
+        document.getElementById('p_smtp_user').value = p.smtp_user || '';
+        document.getElementById('p_reply_to').value = p.reply_to_email || '';
+        document.getElementById('p_smtp_host').value = p.smtp_host || '';
+        document.getElementById('p_smtp_port').value = p.smtp_port || 465;
+        document.getElementById('p_smtp_password').value = '';
+        document.getElementById('p_smtp_password').placeholder = 'Type new password to change it';
+        document.getElementById('p_smtp_password_hint').style.display = 'block';
+        const sec = p.use_ssl ? 'ssl' : (p.use_tls ? 'tls' : 'none');
+        document.getElementById('p_security').value = sec;
+        document.getElementById('p_is_default').checked = !!p.is_default;
+        // IMAP
+        document.getElementById('p_imap_host').value = p.imap_host || '';
+        document.getElementById('p_imap_port').value = p.imap_port || 993;
+        document.getElementById('p_imap_user').value = p.imap_user || '';
+        document.getElementById('p_imap_password').value = '';
+        document.getElementById('p_imap_password').placeholder = p.imap_host ? '•••• leave blank to keep current' : '';
+        document.getElementById('p_imap_password_hint').style.display = p.imap_host ? 'block' : 'none';
+        if (p.imap_host) {
+            document.getElementById('imapToggle').classList.add('open');
+            document.getElementById('imapFields').classList.add('open');
         }
-
-        // --- LOAD SETTINGS ---
-        async function loadSettings() {
-            try {
-                const s = await api.get('/settings');
-                const fields = ['email_delay_seconds', 'daily_send_limit', 'unsubscribe_footer', 'default_sheet_id'];
-                fields.forEach(f => {
-                    if(document.getElementById(f)) document.getElementById(f).value = s[f] || (f.includes('port') ? 465 : "");
-                });
-                if(s.gemini_api_key) document.getElementById('gemini_api_key').placeholder = "••••••••••••";
-                if(s.google_sheets_api_key) document.getElementById('google_sheets_api_key').placeholder = "••••••••••••";
-            } catch (err) { showToast(err.message, "danger"); }
-        }
-
-        // --- MODAL LOGIC ---
-        function openProfileModal(id = null) {
-            document.getElementById('profileModal').classList.add('active');
-            if(id) {
-                const p = currentProfiles.find(x => x.id === id);
-                document.getElementById('modalTitle').textContent = 'Edit Sender Profile';
-                document.getElementById('p_id').value = p.id;
-                document.getElementById('p_name').value = p.name;
-                document.getElementById('p_from_name').value = p.from_name;
-                document.getElementById('p_smtp_user').value = p.smtp_user;
-                document.getElementById('p_reply_to').value = p.reply_to_email;
-                document.getElementById('p_smtp_host').value = p.smtp_host;
-                document.getElementById('p_smtp_port').value = p.smtp_port;
-                document.getElementById('p_smtp_password').value = "••••••••";
-                document.getElementById('p_use_ssl').checked = p.use_ssl;
-                document.getElementById('p_is_default').checked = p.is_default;
-            } else {
-                document.getElementById('modalTitle').textContent = 'Add Sender Profile';
-                document.getElementById('p_id').value = '';
-                document.querySelectorAll('#profileModal input:not([type="checkbox"])').forEach(i => i.value = '');
-                document.getElementById('p_smtp_port').value = '465';
-                document.getElementById('p_use_ssl').checked = true;
-            }
-        }
-
-        function closeProfileModal() {
-            document.getElementById('profileModal').classList.remove('active');
-        }
-
-        async function saveProfile() {
-            const id = document.getElementById('p_id').value;
-            const payload = {
-                name: document.getElementById('p_name').value,
-                from_name: document.getElementById('p_from_name').value,
-                smtp_user: document.getElementById('p_smtp_user').value,
-                reply_to_email: document.getElementById('p_reply_to').value,
-                smtp_host: document.getElementById('p_smtp_host').value,
-                smtp_port: parseInt(document.getElementById('p_smtp_port').value),
-                smtp_password: document.getElementById('p_smtp_password').value,
-                use_ssl: document.getElementById('p_use_ssl').checked,
-                use_tls: document.getElementById('p_use_tls').checked,
-                imap_host: document.getElementById('p_imap_host').value,
-                imap_port: parseInt(document.getElementById('p_imap_port').value),
-                imap_password: document.getElementById('p_imap_password').value,
-                is_default: document.getElementById('p_is_default').checked
-            };
-
-            try {
-                if(id) await api.put(`/settings/profiles/${id}`, payload);
-                else await api.post('/settings/profiles', payload);
-                
-                showToast("Profile saved!");
-                closeProfileModal();
-                loadProfiles();
-            } catch (err) { showToast(err.message, "danger"); }
-        }
-
-        async function deleteProfile(id) {
-            if(confirm("Are you sure you want to delete this profile?")) {
-                try {
-                    await api.delete(`/settings/profiles/${id}`);
-                    showToast("Profile deleted");
-                    loadProfiles();
-                } catch (err) { showToast(err.message, "danger"); }
-            }
-        }
-
-        function editProfile(id) { openProfileModal(id); }
-
-        // --- SAVE GLOBAL SETTINGS ---
-        document.getElementById('saveAllBtn').addEventListener('click', async () => {
-            const payload = {
-                gemini_api_key: document.getElementById('gemini_api_key').value,
-                email_delay_seconds: parseInt(document.getElementById('email_delay_seconds').value),
-                daily_send_limit: parseInt(document.getElementById('daily_send_limit').value),
-                unsubscribe_footer: document.getElementById('unsubscribe_footer').value,
-                google_sheets_api_key: document.getElementById('google_sheets_api_key').value,
-                default_sheet_id: document.getElementById('default_sheet_id').value
-            };
-            
-            try {
-                await api.post('/settings', payload);
-                showToast("Global settings saved!");
-                loadSettings();
-            } catch (err) { showToast(err.message, "danger"); }
+    } else {
+        document.getElementById('modalTitle').textContent = 'Add Sender Profile';
+        document.getElementById('p_id').value = '';
+        ['p_name','p_from_name','p_smtp_user','p_reply_to','p_smtp_host','p_smtp_password',
+         'p_imap_host','p_imap_user','p_imap_password'].forEach(f => {
+            const el = document.getElementById(f);
+            if (el) { el.value = ''; el.placeholder = el.getAttribute('placeholder') || ''; }
         });
+        document.getElementById('p_smtp_port').value = 465;
+        document.getElementById('p_imap_port').value = 993;
+        document.getElementById('p_security').value = 'ssl';
+        document.getElementById('p_is_default').checked = false;
+        document.getElementById('p_smtp_password_hint').style.display = 'none';
+        document.getElementById('p_imap_password_hint').style.display = 'none';
+        document.getElementById('imapToggle').classList.remove('open');
+        document.getElementById('imapFields').classList.remove('open');
+    }
+}
 
-        async function testConnection(type) {
-            const resDiv = document.getElementById(`${type}_test_res`);
-            resDiv.style.display = 'block';
-            resDiv.className = 'test-result';
-            resDiv.innerHTML = 'Testing...';
-            try {
-                const res = await api.post(`/settings/${type}/test`, {});
-                resDiv.textContent = res.message;
-                resDiv.classList.add('test-success');
-            } catch (err) {
-                resDiv.textContent = err.message;
-                resDiv.classList.add('test-error');
-            }
-        }
+function closeProfileModal() {
+    document.getElementById('profileModal').classList.remove('active');
+    editingProfileId = null;
+}
 
+/* ── Save profile ───────────────────────────────────── */
+async function saveProfile() {
+    const id = document.getElementById('p_id').value;
+
+    const name       = document.getElementById('p_name').value.trim();
+    const from_name  = document.getElementById('p_from_name').value.trim();
+    const smtp_user  = document.getElementById('p_smtp_user').value.trim();
+    const reply_to   = document.getElementById('p_reply_to').value.trim();
+    const smtp_host  = document.getElementById('p_smtp_host').value.trim();
+    const smtp_port  = parseInt(document.getElementById('p_smtp_port').value) || 465;
+    const smtp_pass  = document.getElementById('p_smtp_password').value;
+    const security   = document.getElementById('p_security').value;
+    const use_ssl    = security === 'ssl';
+    const use_tls    = security === 'tls';
+    const is_default = document.getElementById('p_is_default').checked;
+    const imap_host  = document.getElementById('p_imap_host').value.trim();
+    const imap_port  = parseInt(document.getElementById('p_imap_port').value) || 993;
+    const imap_user  = document.getElementById('p_imap_user').value.trim();
+    const imap_pass  = document.getElementById('p_imap_password').value;
+
+    // Validation
+    if (!name || !smtp_user || !smtp_host || !reply_to || !from_name) {
+        showToast('Please fill all required fields (*)', 'danger'); return;
+    }
+    if (!id && !smtp_pass) {
+        showToast('SMTP password is required for a new profile', 'danger'); return;
+    }
+
+    const payload = {
+        name, from_name, smtp_user, reply_to_email: reply_to,
+        smtp_host, smtp_port, use_ssl, use_tls: use_tls || false,
+        is_default,
+        imap_host: imap_host || null,
+        imap_port: imap_host ? imap_port : null,
+        imap_user: imap_host ? (imap_user || smtp_user) : null,
+    };
+
+    // Only include passwords if user typed something (not blank + editing)
+    if (smtp_pass) payload.smtp_password = smtp_pass;
+    else if (!id) { showToast('SMTP password required', 'danger'); return; }
+    else payload.smtp_password = '••••••••'; // signals backend: keep existing
+
+    if (imap_pass) payload.imap_password = imap_pass;
+    else if (imap_host && !id) payload.imap_password = '';
+    else payload.imap_password = '••••••••';
+
+    setBtnLoading('saveProfileBtn', true);
+    try {
+        if (id) await api.put(`/settings/profiles/${id}`, payload);
+        else    await api.post('/settings/profiles', payload);
+        showToast('Profile saved successfully!');
+        closeProfileModal();
         loadProfiles();
-        loadSettings();
-    </script>
+    } catch (err) {
+        const msg = err.detail?.detail
+            ? JSON.stringify(err.detail.detail)
+            : (err.message || 'Save failed');
+        showToast(msg, 'danger');
+    } finally {
+        setBtnLoading('saveProfileBtn', false);
+    }
+}
+
+/* ── Delete profile ─────────────────────────────────── */
+async function deleteProfile(id) {
+    if (!confirm('Delete this sender profile? This cannot be undone.')) return;
+    try {
+        await api.delete(`/settings/profiles/${id}`);
+        showToast('Profile deleted');
+        loadProfiles();
+    } catch (err) { showToast(err.message || 'Delete failed', 'danger'); }
+}
+
+function editProfile(id) { openProfileModal(id); }
+
+/* ── Test SMTP (from profile card) ─────────────────── */
+async function testSingleProfile(id) {
+    const list = document.getElementById('profilesList');
+    // Quick visual feedback on card
+    showToast('Testing SMTP connection…', 'success');
+    try {
+        const res = await api.post('/settings/smtp/test', { profile_id: id });
+        showToast(res.success ? `✅ ${res.message}` : `❌ ${res.message}`,
+            res.success ? 'success' : 'danger');
+    } catch (err) {
+        showToast('SMTP test failed: ' + (err.message || 'Error'), 'danger');
+    }
+}
+
+/* ── Test SMTP (from modal) ─────────────────────────── */
+async function testProfileSmtp() {
+    const id = document.getElementById('p_id').value;
+    const toEmail = (document.getElementById('p_test_to').value || '').trim();
+    const msg = toEmail ? `Sending test email to ${toEmail}…` : 'Testing SMTP connection…';
+    showResult('modal_test_res', msg, 'loading');
+    try {
+        const body = {};
+        if (id) body.profile_id = id;
+        if (toEmail) body.to_email = toEmail;
+        const res = await api.post('/settings/smtp/test', body);
+        showResult('modal_test_res',
+            res.success ? res.message : res.message,
+            res.success ? 'success' : 'error');
+    } catch (err) {
+        showResult('modal_test_res', err.message || 'Connection failed', 'error');
+    }
+}
+
+/* ── Save AI key ────────────────────────────────────── */
+async function saveAiKey() {
+    const key = document.getElementById('gemini_api_key').value.trim();
+    setBtnLoading('saveAiBtn', true);
+    try {
+        const payload = {};
+        if (key) payload.gemini_api_key = key;
+        // If blank, don't overwrite existing key
+        if (!key) { showToast('No new key entered — existing key unchanged'); return; }
+        await api.post('/settings', payload);
+        showToast('Gemini API key saved!');
+        document.getElementById('gemini_api_key').value = '';
+        document.getElementById('gemini_api_key').placeholder = '•••• saved — enter new key to replace';
+    } catch (err) { showToast(err.message || 'Save failed', 'danger'); }
+    finally { setBtnLoading('saveAiBtn', false); }
+}
+
+/* ── Test AI ────────────────────────────────────────── */
+async function testAI() {
+    showResult('ai_test_res', 'Sending test prompt to Gemini…', 'loading');
+    try {
+        const res = await api.post('/settings/ai/test', {});
+        showResult('ai_test_res',
+            res.success ? `Response: "${res.message}" (${res.model})` : res.message,
+            res.success ? 'success' : 'error');
+    } catch (err) {
+        showResult('ai_test_res', err.message || 'AI test failed', 'error');
+    }
+}
+
+/* ── Save Safety ────────────────────────────────────── */
+async function saveSafety() {
+    const delay = parseInt(document.getElementById('email_delay_seconds').value) || 300;
+    const limit = parseInt(document.getElementById('daily_send_limit').value) || 500;
+    const footer = document.getElementById('unsubscribe_footer').value;
+
+    setBtnLoading('saveSafetyBtn', true);
+    try {
+        await api.post('/settings', {
+            email_delay_seconds: Math.max(60, delay),
+            daily_send_limit: limit,
+            unsubscribe_footer: footer
+        });
+        showResult('safety_save_res', 'Safety settings saved!', 'success');
+        showToast('Safety settings saved!');
+    } catch (err) {
+        showResult('safety_save_res', err.message || 'Save failed', 'error');
+    } finally { setBtnLoading('saveSafetyBtn', false); }
+}
+
+/* ── Save Sheets ────────────────────────────────────── */
+async function saveSheets() {
+    const key = document.getElementById('google_sheets_api_key').value.trim();
+    const sheetId = document.getElementById('default_sheet_id').value.trim();
+    setBtnLoading('saveSheetBtn', true);
+    try {
+        const payload = { default_sheet_id: sheetId };
+        if (key) payload.google_sheets_api_key = key;
+        await api.post('/settings', payload);
+        showToast('Google Sheets settings saved!');
+        if (key) {
+            document.getElementById('google_sheets_api_key').value = '';
+            document.getElementById('google_sheets_api_key').placeholder = '•••• saved — enter new key to replace';
+        }
+    } catch (err) { showToast(err.message || 'Save failed', 'danger'); }
+    finally { setBtnLoading('saveSheetBtn', false); }
+}
+
+/* ── Test Sheets ────────────────────────────────────── */
+async function testSheets() {
+    const key = document.getElementById('test_sheets_key').value.trim();
+    const sheetId = document.getElementById('test_sheet_id').value.trim();
+    if (!key || !sheetId) {
+        showResult('sheets_test_res', 'Enter an API key and Sheet ID to test', 'error');
+        return;
+    }
+    showResult('sheets_test_res', 'Connecting to Google Sheets…', 'loading');
+    try {
+        const res = await api.post('/settings/sheets/test', { api_key: key, sheet_id: sheetId });
+        showResult('sheets_test_res',
+            res.success ? `Connected: "${res.sheet_title}"` : res.message,
+            res.success ? 'success' : 'error');
+    } catch (err) {
+        showResult('sheets_test_res', err.message || 'Test failed', 'error');
+    }
+}
+
+/* ── XSS helper ─────────────────────────────────────── */
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+
+/* ── Admin: Apply .env SMTP ─────────────────────────── */
+async function checkAdminEnvSmtp() {
+    const payload = api.getTokenPayload();
+    if (!payload || payload.role !== 'admin') return;
+    try {
+        const env = await api.get('/settings/env-smtp');
+        if (env && env.configured) {
+            const btn = document.getElementById('applyEnvBtn');
+            if (btn) {
+                btn.style.display = 'inline-flex';
+                btn.title = `Apply .env SMTP: ${env.smtp_user} via ${env.smtp_host}:${env.smtp_port}`;
+            }
+        }
+    } catch (_) {}
+}
+
+async function applyEnvSmtp() {
+    const btn = document.getElementById('applyEnvBtn');
+    if (btn) btn.classList.add('btn-loading');
+    try {
+        const res = await api.post('/settings/profiles/from-env', {});
+        showToast(res.message || 'SMTP profile applied from .env');
+        loadProfiles();
+    } catch (err) {
+        showToast(err.message || 'Failed — check SMTP_PASSWORD in .env', 'danger');
+    } finally {
+        if (btn) btn.classList.remove('btn-loading');
+    }
+}
+
+/* ── Init ───────────────────────────────────────────── */
+loadProfiles();
+loadSettings();
+checkAdminEnvSmtp();
+</script>
 </body>
 </html>

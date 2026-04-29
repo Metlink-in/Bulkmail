@@ -549,45 +549,80 @@
             });
         });
 
-        // --- CAMPAIGN START ---
-        document.getElementById('startCampaignBtn').addEventListener('click', async (e) => {
-            if(!subjectInput.value || !htmlBody.innerText) return showToast("Subject and body required", "warning");
-            const btn = e.target; btn.disabled = true; btn.textContent = "Launching...";
-            
+        // --- SAVE AS TEMPLATE ---
+        let pendingLaunchAfterSave = false;
+
+        document.getElementById('saveAsTemplateBtn').addEventListener('click', () => {
+            if(!subjectInput.value || !htmlBody.innerText.trim()) return showToast("Subject and body are required", "warning");
+            pendingLaunchAfterSave = false;
+            document.getElementById('newTemplateName').value = '';
+            document.getElementById('templateModal').style.display = 'flex';
+        });
+
+        document.getElementById('confirmSaveTemplate').addEventListener('click', async () => {
+            const name = document.getElementById('newTemplateName').value.trim();
+            if(!name) return showToast("Enter a template name", "warning");
             try {
-                // Auto-save template if needed or just use current
                 const tRes = await api.post('/template', {
-                    name: "Campaign " + new Date().toLocaleString(),
+                    name,
                     subject: subjectInput.value,
                     html_body: htmlBody.innerHTML
                 });
+                const tSel = document.getElementById('templateSelect');
+                const opt = document.createElement('option');
+                opt.value = tRes.id;
+                opt.textContent = name;
+                opt.selected = true;
+                tSel.appendChild(opt);
+                closeModal();
+                showToast("Template saved!");
+                if(pendingLaunchAfterSave) {
+                    pendingLaunchAfterSave = false;
+                    launchCampaign(tRes.id);
+                }
+            } catch(e) { showToast(e.message, "danger"); }
+        });
 
+        // --- CAMPAIGN LAUNCH ---
+        async function launchCampaign(templateId) {
+            const btn = document.getElementById('startCampaignBtn');
+            btn.disabled = true; btn.textContent = "Launching...";
+            try {
                 const payload = {
-                    template_id: tRes.id,
+                    sender_profile_id: document.getElementById('senderProfileSelect').value || null,
+                    template_id: templateId,
                     contact_list_id: document.getElementById('contactListSelect').value || null,
                     interval_seconds: parseInt(document.getElementById('delayRange').value) * 60,
                     daily_limit: parseInt(document.getElementById('dailyLimit').value) || 500,
-                    campaign_name: document.getElementById('campaignName').value || "Unnamed Campaign",
-                    contact_ids: loadedContacts.some(c => c._id.startsWith('manual')) ? loadedContacts.map(c => c.email) : null // Backend fallback
                 };
-                
-                // If it's manual, we should probably create a temporary list or send IDs
-                // In our current backend, /jobs expects contact_list_id OR contact_ids
                 if(loadedContacts.length > 0 && !payload.contact_list_id) {
-                    // If they are not from a saved list, we treat them as individual IDs or emails
-                    // For now, let's just use the emails if manual
                     payload.contact_ids = loadedContacts.map(c => c._id);
-                    // But wait, the backend needs these contacts to exist in the DB.
-                    // For manual input, we should probably save them to a "Manual List" first.
                 }
-                
-                if(document.getElementById('scheduleAt').value) payload.schedule_at = new Date(document.getElementById('scheduleAt').value).toISOString();
-                
+                const scheduleVal = document.getElementById('scheduleAt').value;
+                if(scheduleVal) payload.schedule_at = new Date(scheduleVal).toISOString();
+
                 const res = await api.post('/mail/jobs', payload);
                 activeJobId = res.job_id;
-                showToast("Campaign started successfully!", "success");
+                showToast("Campaign launched successfully!");
                 startJobPolling(activeJobId);
-            } catch (err) { showToast(err.message, "danger"); btn.disabled = false; btn.textContent = "Launch Campaign"; }
+            } catch (err) {
+                showToast(err.message, "danger");
+                btn.disabled = false;
+                btn.textContent = "🚀 Launch Campaign";
+            }
+        }
+
+        document.getElementById('startCampaignBtn').addEventListener('click', () => {
+            if(!subjectInput.value || !htmlBody.innerText.trim()) return showToast("Subject and body are required", "warning");
+            const selectedTemplateId = document.getElementById('templateSelect').value;
+            if(!selectedTemplateId) {
+                // No template selected — ask user to name and save it first
+                pendingLaunchAfterSave = true;
+                document.getElementById('newTemplateName').value = document.getElementById('campaignName').value || '';
+                document.getElementById('templateModal').style.display = 'flex';
+                return;
+            }
+            launchCampaign(selectedTemplateId);
         });
 
         function startJobPolling(jobId) {
@@ -700,40 +735,6 @@
 
             } catch(e) { console.error("Initial load error", e); }
         }
-
-        // Updated start campaign logic to include sender_profile_id
-        document.getElementById('startCampaignBtn').addEventListener('click', async (e) => {
-            if(!subjectInput.value || !htmlBody.innerText) return showToast("Subject and body required", "warning");
-            const btn = e.target; btn.disabled = true; btn.textContent = "Launching...";
-            
-            try {
-                const tRes = await api.post('/template', {
-                    name: "Campaign " + new Date().toLocaleString(),
-                    subject: subjectInput.value,
-                    html_body: htmlBody.innerHTML
-                });
-
-                const payload = {
-                    sender_profile_id: document.getElementById('senderProfileSelect').value || null,
-                    template_id: tRes.id,
-                    contact_list_id: document.getElementById('contactListSelect').value || null,
-                    interval_seconds: parseInt(document.getElementById('delayRange').value) * 60,
-                    daily_limit: parseInt(document.getElementById('dailyLimit').value) || 500,
-                    campaign_name: document.getElementById('campaignName').value || "Unnamed Campaign",
-                };
-                
-                if(loadedContacts.length > 0 && !payload.contact_list_id) {
-                    payload.contact_ids = loadedContacts.map(c => c._id);
-                }
-                
-                if(document.getElementById('scheduleAt').value) payload.schedule_at = new Date(document.getElementById('scheduleAt').value).toISOString();
-                
-                const res = await api.post('/mail/jobs', payload);
-                activeJobId = res.job_id;
-                showToast("Campaign launched successfully!");
-                startJobPolling(activeJobId);
-            } catch (err) { showToast(err.message, "danger"); btn.disabled = false; btn.textContent = "Launch Campaign"; }
-        });
 
         loadInitial();
     </script>

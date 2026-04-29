@@ -1,0 +1,26 @@
+# Python virtual environment — never deploy this
+.venv/
+venv/
+env/
+
+# Dev/debug scripts
+scratch/
+test_*.py
+test_*.sh
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local env (use Vercel Environment Variables dashboard instead)
+.env
+
+# Editor
+.vscode/
+.idea/
+.DS_Store

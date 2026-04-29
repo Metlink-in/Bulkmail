@@ -44,6 +44,9 @@ tempCodeRunnerFile.py
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/
+test_*.py
+test_*.sh
+report.txt
 
 # Vercel
 .vercel

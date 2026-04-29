@@ -72,11 +72,27 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error"}
     )
 
-# CORS
-origins = [o.strip() for o in settings.CORS_ORIGINS.split(",")] if settings.CORS_ORIGINS else ["*"]
+# CORS — never combine allow_origins=["*"] with allow_credentials=True (Starlette rejects preflight with 400)
+_raw_origins = settings.CORS_ORIGINS.strip() if settings.CORS_ORIGINS else ""
+if _raw_origins and _raw_origins != "*":
+    origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+else:
+    # Wildcard not allowed with credentials; enumerate the common dev + prod origins
+    origins = [
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://localhost:4173",
+    ]
+    if settings.FRONTEND_URL:
+        origins.append(settings.FRONTEND_URL.rstrip("/"))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

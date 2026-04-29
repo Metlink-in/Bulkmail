@@ -61,8 +61,8 @@
                     <div style="padding:16px; background:var(--bg-primary); border-top:1px solid var(--border);">
                         <label class="input-label">Variable Preview Data</label>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                            <input type="text" id="var_first_name" class="input" value="Alex" placeholder="First Name">
-                            <input type="text" id="var_company" class="input" value="Stark Ind." placeholder="Company">
+                            <input type="text" id="var_first_name" class="input" placeholder="First Name (preview)">
+                            <input type="text" id="var_company" class="input" placeholder="Company (preview)">
                         </div>
                     </div>
                 </div>
@@ -148,8 +148,10 @@
             
             // Replace vars
             const vars = {
-                '{first_name}': document.getElementById('var_first_name').value || 'Alex',
-                '{company}': document.getElementById('var_company').value || 'Stark Ind.'
+                '{first_name}': document.getElementById('var_first_name').value || '{first_name}',
+                '{org}': document.getElementById('var_company').value || '{org}',
+                '{company}': document.getElementById('var_company').value || '{company}',
+                '{name}': document.getElementById('var_first_name').value || '{name}'
             };
             for(let k in vars) html = html.replace(new RegExp(k, 'g'), vars[k]);
             

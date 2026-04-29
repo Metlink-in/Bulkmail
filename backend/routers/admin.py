@@ -26,6 +26,9 @@ class UserUpdateAdmin(BaseModel):
     is_active: Optional[bool] = None
     role: Optional[str] = None
 
+class ResetPasswordAdmin(BaseModel):
+    new_password: str
+
 def get_db_id(doc):
     return str(doc.get("_id"))
 
@@ -393,6 +396,74 @@ async def get_live_monitoring(current_admin: Dict[str, Any] = Depends(require_ad
         "errors_last_hour": err_1h,
         "active_users_online": active_users
     })
+
+@router.post("/users/{user_id}/reset-password")
+async def reset_user_password(user_id: str, body: ResetPasswordAdmin, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    from backend.middleware.auth_middleware import parse_object_id
+    uid = parse_object_id(user_id)
+    if not body.new_password or len(body.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    res = await db.users.find_one_and_update(
+        {"_id": uid},
+        {"$set": {"hashed_password": hash_password(body.new_password)}},
+        return_document=True
+    )
+    if not res:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "Password reset successfully"}
+
+
+@router.get("/users/{user_id}/smtp-profiles")
+async def get_user_smtp_profiles(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    from backend.utils.helpers import decrypt_secret
+    profiles = await db.user_credentials.find({"user_id": user_id, "name": {"$exists": True}}).to_list(100)
+    result = []
+    for p in profiles:
+        p["id"] = str(p.pop("_id"))
+        p.pop("user_id", None)
+        if p.get("smtp_password"):
+            try:
+                p["smtp_password"] = decrypt_secret(p["smtp_password"], settings.ENCRYPTION_KEY)
+            except Exception:
+                p["smtp_password"] = ""
+        if p.get("imap_password"):
+            try:
+                p["imap_password"] = decrypt_secret(p["imap_password"], settings.ENCRYPTION_KEY)
+            except Exception:
+                p["imap_password"] = ""
+        result.append(p)
+    return json_safe(result)
+
+
+@router.post("/seed-templates")
+async def seed_global_templates(current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    from backend.templates_data import GLOBAL_TEMPLATES
+    existing = await db.mail_templates.count_documents({"is_global": True})
+    if existing > 0:
+        return {"message": f"{existing} global templates already exist. Delete them in MongoDB first to re-seed.", "count": existing}
+
+    now = get_current_timestamp()
+    docs = []
+    for t in GLOBAL_TEMPLATES:
+        docs.append({
+            "_id": str(uuid.uuid4()),
+            "is_global": True,
+            "user_id": "global",
+            "name": t["name"],
+            "subject": t["subject"],
+            "html_body": t["html_body"].strip(),
+            "created_at": now,
+            "updated_at": now,
+        })
+    await db.mail_templates.insert_many(docs)
+    return {"message": f"Seeded {len(docs)} global templates successfully.", "count": len(docs)}
+
+
+@router.delete("/seed-templates")
+async def delete_global_templates(current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    res = await db.mail_templates.delete_many({"is_global": True})
+    return {"message": f"Deleted {res.deleted_count} global templates.", "count": res.deleted_count}
+
 
 @router.get("/users/{user_id}/impersonate")
 async def impersonate_user(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):

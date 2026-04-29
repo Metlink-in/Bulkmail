@@ -161,31 +161,55 @@
             <div class="modal-header">Import Contacts</div>
             <div class="modal-body">
                 <div class="tabs">
-                    <div class="tab-item active" onclick="switchImportTab('csv')">CSV Upload</div>
-                    <div class="tab-item" onclick="switchImportTab('sheets')">Google Sheets</div>
+                    <div class="tab-item active" onclick="switchImportTab('csv')">📄 CSV Upload</div>
+                    <div class="tab-item" onclick="switchImportTab('paste')">✏️ Paste Emails</div>
+                    <div class="tab-item" onclick="switchImportTab('sheets')">📊 Google Sheets</div>
                 </div>
-                
+
+                <!-- CSV -->
                 <div id="importCsv">
                     <div class="input-group">
-                        <label class="input-label">File</label>
+                        <label class="input-label">CSV File</label>
                         <input type="file" id="csvFile" class="input" accept=".csv">
                     </div>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
+                        Expected columns: <code>email</code>, <code>name</code> (optional), <code>org</code> (optional).
+                        One row per contact.
+                    </p>
                 </div>
-                
+
+                <!-- Paste -->
+                <div id="importPaste" style="display:none">
+                    <div class="input-group">
+                        <label class="input-label">Paste Emails (one per line)</label>
+                        <textarea id="pasteEmails" class="input" rows="8"
+                            placeholder="alice@example.com&#10;bob@company.io&#10;carol@startup.com&#10;&#10;You can also paste   name,email   or   email,name   format."
+                            style="font-family:monospace;font-size:13px;resize:vertical;"></textarea>
+                    </div>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+                        Supports plain emails or <code>name, email</code> / <code>email, name</code> per line.
+                        Duplicates are auto-skipped.
+                    </p>
+                </div>
+
+                <!-- Google Sheets -->
                 <div id="importSheets" style="display:none">
                     <div class="input-group">
-                        <label class="input-label">Sheet URL</label>
-                        <input type="text" id="sheetUrl" class="input">
+                        <label class="input-label">Sheet URL or Spreadsheet ID</label>
+                        <input type="text" id="sheetUrl" class="input" placeholder="https://docs.google.com/spreadsheets/d/…">
                     </div>
                     <div class="input-group">
                         <label class="input-label">Range</label>
                         <input type="text" id="sheetRange" class="input" value="Sheet1!A:Z">
                     </div>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+                        Requires Google Sheets API key in Settings → Google Sheets.
+                    </p>
                 </div>
-                
+
                 <div class="input-group" style="margin-top:16px;">
-                    <label class="input-label">Name this Import</label>
-                    <input type="text" id="importName" class="input" placeholder="e.g. Facebook Ads Leads">
+                    <label class="input-label">List Name *</label>
+                    <input type="text" id="importName" class="input" placeholder="e.g. Facebook Ads Leads — Jan 2026">
                 </div>
             </div>
             <div class="modal-footer">
@@ -215,7 +239,17 @@
 
         function closeModals() { document.querySelectorAll('.modal-backdrop').forEach(m => m.style.display = 'none'); }
         function openNewListModal() { document.getElementById('newListModal').style.display = 'flex'; }
-        function openImportModal() { document.getElementById('importModal').style.display = 'flex'; }
+        function openImportModal() {
+            // Reset to CSV tab
+            activeImportTab = 'csv';
+            document.querySelectorAll('#importModal .tab-item').forEach((t,i) => t.classList.toggle('active', i===0));
+            document.getElementById('importCsv').style.display = 'block';
+            document.getElementById('importPaste').style.display = 'none';
+            document.getElementById('importSheets').style.display = 'none';
+            document.getElementById('pasteEmails').value = '';
+            document.getElementById('importName').value = '';
+            document.getElementById('importModal').style.display = 'flex';
+        }
 
         async function loadLists() {
             try {
@@ -408,36 +442,60 @@
 
         function closeDrawer() { document.getElementById('contactsDrawer').classList.remove('open'); }
 
-        document.getElementById('confirmImportBtn').addEventListener('click', async (e) => {
-            const btn = e.target; btn.disabled = true;
-            const name = document.getElementById('importName').value || "New Import";
-            
-            try {
-                if(document.getElementById('importCsv').style.display !== 'none') {
-                    const file = document.getElementById('csvFile').files[0];
-                    if(!file) throw new Error("Select a file");
-                    const fd = new FormData();
-                    fd.append("file", file);
-                    fd.append("list_name", name);
-                    await api.upload('/contacts/import/csv', fd);
-                } else {
-                    const url = document.getElementById('sheetUrl').value;
-                    const range = document.getElementById('sheetRange').value;
-                    await api.post('/contacts/import/sheets', { sheet_url: url, range, list_name: name });
-                }
-                showToast("Import started successfully");
-                closeModals();
-                loadLists();
-            } catch(err) { showToast(err.message, "danger"); }
-            finally { btn.disabled = false; }
-        });
+        let activeImportTab = 'csv';
 
         function switchImportTab(type) {
-            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            activeImportTab = type;
+            // Update tab highlight
+            document.querySelectorAll('#importModal .tab-item').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
-            document.getElementById('importCsv').style.display = type === 'csv' ? 'block' : 'none';
+            // Show/hide panels
+            document.getElementById('importCsv').style.display   = type === 'csv'    ? 'block' : 'none';
+            document.getElementById('importPaste').style.display  = type === 'paste'  ? 'block' : 'none';
             document.getElementById('importSheets').style.display = type === 'sheets' ? 'block' : 'none';
         }
+
+        document.getElementById('confirmImportBtn').addEventListener('click', async (e) => {
+            const btn = e.target; btn.disabled = true;
+            btn.textContent = 'Importing…';
+            const name = document.getElementById('importName').value.trim() || 'New Import';
+
+            try {
+                if (activeImportTab === 'csv') {
+                    const file = document.getElementById('csvFile').files[0];
+                    if (!file) throw new Error('Please select a CSV file');
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    fd.append('list_name', name);
+                    const res = await api.upload('/contacts/import/csv', fd);
+                    showToast(`Imported ${res.total_imported} contacts (${res.valid_count} valid)`);
+
+                } else if (activeImportTab === 'paste') {
+                    const raw = document.getElementById('pasteEmails').value.trim();
+                    if (!raw) throw new Error('Please paste at least one email address');
+                    const fd = new FormData();
+                    fd.append('list_name', name);
+                    fd.append('emails', raw);
+                    const res = await api.upload('/contacts/import/manual', fd);
+                    showToast(`Imported ${res.total_imported} contacts`);
+
+                } else {
+                    const url = document.getElementById('sheetUrl').value.trim();
+                    const range = document.getElementById('sheetRange').value.trim() || 'Sheet1!A:Z';
+                    if (!url) throw new Error('Please enter a Sheet URL or ID');
+                    const res = await api.post('/contacts/import/sheets', { sheet_url: url, range, list_name: name });
+                    showToast(`Imported ${res.total_imported} contacts from Google Sheets`);
+                }
+
+                closeModals();
+                loadLists();
+            } catch(err) {
+                showToast(err.message || 'Import failed', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Start Import';
+            }
+        });
 
         loadLists();
     </script>

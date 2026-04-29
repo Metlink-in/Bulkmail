@@ -3,348 +3,783 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BulkReach Pro | AI-Powered Outreach Engine</title>
+    <title>BulkReach Pro — AI-Powered Cold Email Platform</title>
+    <meta name="description" content="Send thousands of personalized cold emails daily with AI that sounds human. Built-in warmup, 99% deliverability, and real-time analytics.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/components.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         :root {
-            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --bg-dark: #030712;
+            --primary:     #2563EB;
+            --primary-dark:#1D4ED8;
+            --primary-light:#EFF6FF;
+            --sidebar:     #1E293B;
+            --sidebar-deep:#0F172A;
+            --text:        #0F172A;
+            --text-muted:  #64748B;
+            --border:      #E2E8F0;
+            --bg-light:    #F8FAFC;
+            --white:       #FFFFFF;
+            --success:     #10B981;
+            --radius:      10px;
         }
 
         body {
-            font-family: 'Outfit', sans-serif;
-            background: var(--bg-dark);
-            color: #f3f4f6;
-            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            background: var(--white);
+            -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
         }
 
-        /* --- NAVBAR --- */
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 24px 5%;
-            position: fixed;
-            top: 0;
-            width: 100%;
-            box-sizing: border-box;
-            background: rgba(3, 7, 18, 0.8);
-            backdrop-filter: blur(12px);
-            z-index: 1000;
-            border-bottom: 1px solid var(--glass-border);
+        a { text-decoration: none; }
+
+        /* ── NAVBAR ── */
+        .nav {
+            position: fixed; top: 0; width: 100%; z-index: 100;
+            background: var(--sidebar-deep);
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 5%; height: 64px;
         }
 
-        .logo {
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .nav-logo {
+            font-size: 18px; font-weight: 800; color: #fff;
+            letter-spacing: -0.3px;
         }
+        .nav-logo span { color: var(--primary); }
 
-        .nav-links { display: flex; gap: 32px; align-items: center; }
-        .nav-links a { color: #9ca3af; text-decoration: none; font-weight: 500; transition: 0.3s; font-size: 15px; }
+        .nav-links {
+            display: flex; align-items: center; gap: 32px;
+        }
+        .nav-links a {
+            font-size: 14px; font-weight: 500;
+            color: #94A3B8; transition: color 0.15s;
+        }
         .nav-links a:hover { color: #fff; }
 
-        /* --- HERO SECTION --- */
-        .hero {
-            position: relative;
-            padding: 180px 5% 100px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            background: url('/assets/hero-bg.png') no-repeat center center/cover;
-            min-height: 100vh;
-            box-sizing: border-box;
+        .nav-btns { display: flex; align-items: center; gap: 10px; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 20px; border-radius: var(--radius);
+            font-size: 14px; font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer; border: none; transition: all 0.15s;
+        }
+        .btn-ghost {
+            background: transparent;
+            color: #94A3B8;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        .btn-ghost:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+
+        .btn-primary {
+            background: var(--primary); color: #fff;
+            box-shadow: 0 1px 3px rgba(37,99,235,0.4);
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+            transform: translateY(-1px);
         }
 
+        .btn-lg {
+            padding: 13px 28px; font-size: 15px; border-radius: 12px;
+        }
+        .btn-white {
+            background: #fff; color: var(--primary);
+            font-weight: 700;
+        }
+        .btn-white:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .btn-outline-white {
+            background: transparent; color: #fff;
+            border: 1.5px solid rgba(255,255,255,0.35);
+        }
+        .btn-outline-white:hover {
+            border-color: rgba(255,255,255,0.7);
+            background: rgba(255,255,255,0.06);
+        }
+
+        /* ── HAMBURGER ── */
+        .hamburger {
+            display: none; flex-direction: column; gap: 5px;
+            cursor: pointer; background: none; border: none; padding: 4px;
+        }
+        .hamburger span {
+            display: block; width: 22px; height: 2px;
+            background: #94A3B8; border-radius: 2px; transition: all 0.25s;
+        }
+        .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        .mobile-menu {
+            display: none; position: fixed; top: 64px; left: 0;
+            width: 100%; background: var(--sidebar-deep);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 20px 5% 28px; flex-direction: column; gap: 4px; z-index: 99;
+        }
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a {
+            color: #CBD5E1; font-size: 15px; font-weight: 500;
+            padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: block;
+        }
+        .mobile-menu-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+        .mobile-menu-btns .btn { justify-content: center; padding: 13px; font-size: 15px; }
+
+        /* ── HERO ── */
+        .hero {
+            background: var(--sidebar-deep);
+            padding: 140px 5% 100px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle grid pattern */
         .hero::before {
             content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, rgba(3, 7, 18, 0.4) 0%, var(--bg-dark) 100%);
-            z-index: 1;
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(37,99,235,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(37,99,235,0.06) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%);
         }
 
-        .hero-content { position: relative; z-index: 2; max-width: 900px; }
-
-        .badge-promo {
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            color: #818cf8;
-            padding: 8px 16px;
-            border-radius: 100px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 32px;
-            display: inline-block;
-            animation: fadeInDown 0.8s ease;
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(37,99,235,0.12);
+            border: 1px solid rgba(37,99,235,0.3);
+            color: #93C5FD;
+            font-size: 13px; font-weight: 600;
+            padding: 6px 14px; border-radius: 100px;
+            margin-bottom: 28px;
+            position: relative; z-index: 1;
+            animation: fadeUp 0.6s ease 0.1s both;
         }
 
         .hero h1 {
-            font-size: clamp(40px, 8vw, 84px);
+            font-size: clamp(32px, 5.5vw, 60px);
             font-weight: 800;
-            line-height: 0.95;
-            margin: 0 0 24px;
-            letter-spacing: -3px;
-            background: linear-gradient(to bottom, #fff 0%, #9ca3af 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: fadeInUp 1s ease;
+            line-height: 1.12;
+            letter-spacing: -1.5px;
+            color: #fff;
+            max-width: 760px;
+            margin: 0 auto 20px;
+            position: relative; z-index: 1;
+            animation: fadeUp 0.65s ease 0.2s both;
+        }
+
+        .hero h1 span {
+            color: var(--primary);
         }
 
         .hero p {
-            font-size: 20px;
-            color: #9ca3af;
-            max-width: 600px;
-            margin: 0 auto 48px;
-            line-height: 1.6;
-            animation: fadeInUp 1.2s ease;
+            font-size: 17px; line-height: 1.7;
+            color: #94A3B8; max-width: 520px;
+            margin: 0 auto 40px;
+            position: relative; z-index: 1;
+            animation: fadeUp 0.65s ease 0.35s both;
         }
 
         .hero-actions {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            position: relative; z-index: 1;
+            animation: fadeUp 0.65s ease 0.45s both;
+        }
+
+        /* ── SOCIAL PROOF STRIP ── */
+        .proof-strip {
+            background: var(--sidebar);
+            border-top: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 20px 5%;
+            display: flex; align-items: center; justify-content: center;
+            gap: 48px; flex-wrap: wrap;
+        }
+
+        .proof-item {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 14px; color: #94A3B8; font-weight: 500;
+        }
+        .proof-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(16,185,129,0.6);
+            flex-shrink: 0;
+        }
+
+        /* ── MOCK DASHBOARD ── */
+        .dashboard-wrap {
+            background: var(--bg-light);
+            padding: 80px 5%;
+            display: flex; justify-content: center;
+        }
+
+        .mock-ui {
+            width: 100%; max-width: 920px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .mock-topbar {
+            background: var(--sidebar-deep);
+            padding: 14px 20px;
+            display: flex; align-items: center; gap: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .mock-dots { display: flex; gap: 6px; }
+        .mock-dot-circle {
+            width: 11px; height: 11px; border-radius: 50%;
+        }
+        .mock-dot-circle:nth-child(1) { background: #EF4444; }
+        .mock-dot-circle:nth-child(2) { background: #F59E0B; }
+        .mock-dot-circle:nth-child(3) { background: var(--success); }
+        .mock-topbar-title {
+            font-size: 12px; color: #64748B; font-family: monospace;
+        }
+
+        .mock-body {
             display: flex;
-            gap: 20px;
-            justify-content: center;
-            animation: fadeInUp 1.4s ease;
+        }
+        .mock-sidebar-strip {
+            width: 180px; flex-shrink: 0;
+            background: var(--sidebar);
+            padding: 16px 12px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .mock-sidebar-item {
+            padding: 8px 12px; border-radius: 7px;
+            font-size: 12px; color: #94A3B8; font-weight: 500;
+        }
+        .mock-sidebar-item.active {
+            background: var(--primary); color: #fff;
+        }
+        .mock-content {
+            flex: 1; padding: 24px; overflow: hidden;
         }
 
-        .btn-xl {
-            padding: 18px 40px;
-            font-size: 16px;
-            font-weight: 700;
-            border-radius: 14px;
-            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        .mock-stats-row {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 12px; margin-bottom: 20px;
+        }
+        .mock-stat-box {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .mock-stat-num {
+            font-size: 20px; font-weight: 800;
+            color: var(--text); letter-spacing: -0.5px;
+        }
+        .mock-stat-lbl {
+            font-size: 10px; color: var(--text-muted);
+            margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .mock-stat-delta {
+            font-size: 10px; color: var(--success);
+            font-weight: 600; margin-top: 4px;
         }
 
-        .btn-glow {
-            background: var(--primary-gradient);
-            color: #fff;
-            box-shadow: 0 0 30px rgba(99, 102, 241, 0.4);
-            border: none;
+        .mock-bars {
+            display: flex; flex-direction: column; gap: 10px;
+            margin-bottom: 20px;
         }
-
-        .btn-glow:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 0 50px rgba(99, 102, 241, 0.6);
+        .mock-bar-row { display: flex; flex-direction: column; gap: 4px; }
+        .mock-bar-label {
+            display: flex; justify-content: space-between;
+            font-size: 11px; color: var(--text-muted);
         }
-
-        /* --- MOCKUP --- */
-        .dashboard-preview {
-            position: relative;
-            z-index: 2;
-            margin-top: 80px;
-            width: 100%;
-            max-width: 1100px;
-            border-radius: 24px;
-            padding: 10px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.01));
-            box-shadow: 0 50px 100px -20px rgba(0,0,0,0.5);
-            animation: float 6s ease-in-out infinite;
+        .mock-bar-track {
+            height: 5px; background: var(--border); border-radius: 3px; overflow: hidden;
         }
-
-        .dashboard-preview img {
-            width: 100%;
-            border-radius: 18px;
-            display: block;
+        .mock-bar-fill {
+            height: 100%; border-radius: 3px;
+            background: var(--primary);
+            width: 0;
+            animation: bar-fill 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation-delay: var(--d, 0.6s);
         }
+        @keyframes bar-fill { to { width: var(--w, 50%); } }
 
-        /* --- FEATURES --- */
-        .section-header { text-align: center; padding: 100px 5% 60px; }
-        .section-header h2 { font-size: 48px; font-weight: 800; letter-spacing: -2px; }
-        .section-header p { color: #9ca3af; font-size: 18px; max-width: 600px; margin: 16px auto; }
+        .mock-feed { display: flex; flex-direction: column; gap: 7px; }
+        .mock-feed-row {
+            display: flex; align-items: center; gap: 9px;
+            background: var(--bg-light); border-radius: 7px;
+            padding: 7px 10px; font-size: 11px; color: var(--text-muted);
+        }
+        .feed-dot {
+            width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+        }
+        .feed-dot-green  { background: var(--success); }
+        .feed-dot-blue   { background: var(--primary); }
+        .feed-dot-amber  { background: #F59E0B; }
+        .feed-time { margin-left: auto; font-size: 10px; color: #CBD5E1; flex-shrink: 0; }
+
+        /* ── SECTION ── */
+        section { padding: 100px 5%; }
+
+        .section-label {
+            font-size: 12px; font-weight: 700; letter-spacing: 2.5px;
+            text-transform: uppercase; color: var(--primary);
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: clamp(26px, 3.5vw, 40px);
+            font-weight: 800; letter-spacing: -1px;
+            color: var(--text); margin-bottom: 14px;
+        }
+        .section-sub {
+            font-size: 16px; color: var(--text-muted);
+            max-width: 500px; line-height: 1.7;
+        }
+        .section-header { margin-bottom: 56px; }
+
+        /* ── FEATURES ── */
+        #features { background: var(--white); }
 
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 24px;
-            padding: 0 5% 100px;
         }
 
         .feature-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            padding: 40px;
-            border-radius: 24px;
-            transition: 0.4s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card:hover {
-            background: rgba(255,255,255,0.05);
-            border-color: rgba(99, 102, 241, 0.3);
-            transform: translateY(-8px);
-        }
-
-        .feature-icon {
-            width: 54px;
-            height: 54px;
-            background: var(--primary-gradient);
+            border: 1px solid var(--border);
             border-radius: 14px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
+            padding: 28px;
+            background: var(--white);
+            transition: all 0.2s;
+        }
+        .feature-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 32px rgba(37,99,235,0.08);
+            transform: translateY(-3px);
+        }
+        .feature-icon {
+            width: 44px; height: 44px; border-radius: 11px;
+            background: var(--primary-light);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; margin-bottom: 16px;
+        }
+        .feature-card h3 {
+            font-size: 16px; font-weight: 700;
+            margin-bottom: 8px; color: var(--text);
+        }
+        .feature-card p {
+            font-size: 14px; color: var(--text-muted); line-height: 1.65;
         }
 
-        .feature-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
-        .feature-card p { color: #9ca3af; line-height: 1.6; font-size: 15px; }
+        /* ── HOW IT WORKS ── */
+        #how { background: var(--bg-light); }
 
-        /* --- CTA SECTION --- */
-        .cta-section {
-            padding: 120px 5%;
-            background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent 40%);
+        .steps {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 0; position: relative;
+        }
+        .steps::before {
+            content: '';
+            position: absolute; top: 28px;
+            left: calc(16.66% + 20px); right: calc(16.66% + 20px);
+            height: 1px;
+            background: linear-gradient(to right, var(--primary), rgba(37,99,235,0.2));
         }
 
-        .cta-card {
-            background: var(--primary-gradient);
-            padding: 80px 40px;
-            border-radius: 40px;
+        .step { text-align: center; padding: 0 24px; }
+        .step-num {
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--primary); color: #fff;
+            font-size: 20px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+            position: relative; z-index: 1;
+        }
+        .step h3 {
+            font-size: 17px; font-weight: 700; margin-bottom: 10px; color: var(--text);
+        }
+        .step p {
+            font-size: 14px; color: var(--text-muted); line-height: 1.7;
+        }
+
+        /* ── CTA BAND ── */
+        .cta-band {
+            background: var(--sidebar-deep);
+            padding: 80px 5%;
             text-align: center;
-            position: relative;
-            overflow: hidden;
+            position: relative; overflow: hidden;
+        }
+        .cta-band::before {
+            content: '';
+            position: absolute;
+            top: -120px; left: 50%; transform: translateX(-50%);
+            width: 600px; height: 300px;
+            background: radial-gradient(ellipse, rgba(37,99,235,0.25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .cta-band h2 {
+            font-size: clamp(24px, 4vw, 40px); font-weight: 800;
+            color: #fff; margin-bottom: 14px;
+            position: relative; z-index: 1;
+        }
+        .cta-band p {
+            font-size: 16px; color: #94A3B8; margin-bottom: 36px;
+            position: relative; z-index: 1;
+        }
+        .cta-actions {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            position: relative; z-index: 1;
         }
 
-        .cta-card h2 { font-size: 48px; font-weight: 800; margin-bottom: 24px; }
-        .cta-card p { font-size: 20px; margin-bottom: 40px; opacity: 0.9; }
-
-        /* --- FOOTER --- */
+        /* ── FOOTER ── */
         .footer {
-            padding: 60px 5%;
-            border-top: 1px solid var(--glass-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #6b7280;
-            font-size: 14px;
+            background: var(--sidebar-deep);
+            border-top: 1px solid rgba(255,255,255,0.07);
+            padding: 28px 5%;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 16px;
+            font-size: 13px; color: #64748B;
+        }
+        .footer-logo {
+            font-size: 15px; font-weight: 800; color: #fff;
+        }
+        .footer-logo span { color: var(--primary); }
+        .footer-links { display: flex; gap: 20px; }
+        .footer-links a { color: #64748B; transition: color 0.15s; }
+        .footer-links a:hover { color: #94A3B8; }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- ANIMATIONS --- */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+        .reveal {
+            opacity: 0; transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
         }
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 860px) {
+            .steps { grid-template-columns: 1fr; gap: 40px; }
+            .steps::before { display: none; }
+            .mock-stats-row { grid-template-columns: repeat(2, 1fr); }
+            .mock-sidebar-strip { display: none; }
         }
 
-        @media (max-width: 768px) {
-            .nav-links { display: none; }
-            .hero h1 { font-size: 48px; }
-            .hero-actions { flex-direction: column; width: 100%; }
-            .btn-xl { width: 100%; }
+        @media (max-width: 720px) {
+            .nav-links, .nav-btns { display: none; }
+            .hamburger { display: flex; }
+        }
+
+        @media (max-width: 540px) {
+            .hero { padding: 110px 5% 72px; }
+            .proof-strip { gap: 20px; }
+            .mock-stats-row { grid-template-columns: 1fr 1fr; }
+            section { padding: 72px 5%; }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="logo">BulkReach.Pro</div>
-        <div class="nav-links">
-            <a href="#features">Features</a>
-            <a href="#workflow">Workflow</a>
-            <a href="/login.html">Login</a>
-            <a href="/register.html" class="btn btn-primary">Join Beta</a>
-        </div>
-    </nav>
 
-    <section class="hero">
-        <div class="hero-content">
-            <div class="badge-promo">✨ Powered by Gemini 2.5 Flash</div>
-            <h1>The New Standard for<br>Personalized Outreach.</h1>
-            <p>Send thousands of hyper-personalized cold emails daily with AI that sounds human. 99% deliverability, built-in warmup, and smart automation.</p>
-            <div class="hero-actions">
-                <a href="/register.html" class="btn btn-xl btn-glow">Get Started for Free</a>
-                <a href="/login.html" class="btn btn-xl" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: #fff;">Request Demo</a>
-            </div>
-            
-            <div class="dashboard-preview">
-                <img src="/assets/dashboard.png" alt="BulkReach Dashboard">
-            </div>
-        </div>
-    </section>
-
-    <div id="features" class="section-header">
-        <div style="color: #6366f1; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; margin-bottom: 12px;">The Engine</div>
-        <h2>Built for high-performance agencies</h2>
-        <p>Scale your outreach without getting flagged. Our engine handles the complexity so you can focus on closing deals.</p>
+<!-- NAVBAR -->
+<nav class="nav">
+    <a href="/" class="nav-logo">BulkReach<span>.Pro</span></a>
+    <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
     </div>
+    <div class="nav-btns">
+        <a href="/login.html" class="btn btn-ghost">Log in</a>
+        <a href="/register.html" class="btn btn-primary">Get started</a>
+    </div>
+    <button class="hamburger" id="ham" aria-label="Menu">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
 
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <div class="mobile-menu-btns">
+        <a href="/login.html" class="btn btn-ghost">Log in</a>
+        <a href="/register.html" class="btn btn-primary">Get started free</a>
+    </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-badge">✦ Powered by Google Gemini AI</div>
+    <h1>Cold email at scale,<br><span>without the spam folder.</span></h1>
+    <p>Send thousands of AI-personalized emails daily. Built-in warmup, smart throttling, and reply tracking — all from one dashboard.</p>
+    <div class="hero-actions">
+        <a href="/register.html" class="btn btn-primary btn-lg">Start for free →</a>
+        <a href="/login.html"    class="btn btn-outline-white btn-lg">Sign in</a>
+    </div>
+</section>
+
+<!-- PROOF STRIP -->
+<div class="proof-strip">
+    <div class="proof-item"><div class="proof-dot"></div> 99% average deliverability</div>
+    <div class="proof-item"><div class="proof-dot"></div> Per-user credential isolation</div>
+    <div class="proof-item"><div class="proof-dot"></div> End-to-end encrypted SMTP keys</div>
+    <div class="proof-item"><div class="proof-dot"></div> Real-time campaign analytics</div>
+</div>
+
+<!-- MOCK DASHBOARD -->
+<div class="dashboard-wrap">
+    <div class="mock-ui">
+        <div class="mock-topbar">
+            <div class="mock-dots">
+                <div class="mock-dot-circle"></div>
+                <div class="mock-dot-circle"></div>
+                <div class="mock-dot-circle"></div>
+            </div>
+            <div class="mock-topbar-title">BulkReach Pro — Campaign Overview</div>
+        </div>
+        <div class="mock-body">
+            <div class="mock-sidebar-strip">
+                <div class="mock-sidebar-item active">Dashboard</div>
+                <div class="mock-sidebar-item">Bulk Mail</div>
+                <div class="mock-sidebar-item">Contacts</div>
+                <div class="mock-sidebar-item">Templates</div>
+                <div class="mock-sidebar-item">Replies</div>
+                <div class="mock-sidebar-item">Settings</div>
+            </div>
+            <div class="mock-content">
+                <div class="mock-stats-row">
+                    <div class="mock-stat-box">
+                        <div class="mock-stat-num" id="ms1">0</div>
+                        <div class="mock-stat-lbl">Sent Today</div>
+                        <div class="mock-stat-delta">+23% ↑</div>
+                    </div>
+                    <div class="mock-stat-box">
+                        <div class="mock-stat-num" id="ms2">0</div>
+                        <div class="mock-stat-lbl">Opened</div>
+                        <div class="mock-stat-delta">+18% ↑</div>
+                    </div>
+                    <div class="mock-stat-box">
+                        <div class="mock-stat-num" id="ms3">0</div>
+                        <div class="mock-stat-lbl">Replied</div>
+                        <div class="mock-stat-delta">+31% ↑</div>
+                    </div>
+                    <div class="mock-stat-box">
+                        <div class="mock-stat-num">99.1%</div>
+                        <div class="mock-stat-lbl">Deliverability</div>
+                        <div class="mock-stat-delta">Excellent</div>
+                    </div>
+                </div>
+                <div class="mock-bars">
+                    <div class="mock-bar-row">
+                        <div class="mock-bar-label"><span>SaaS Outreach Q2</span><span>26%</span></div>
+                        <div class="mock-bar-track"><div class="mock-bar-fill" style="--w:26%;--d:0.6s"></div></div>
+                    </div>
+                    <div class="mock-bar-row">
+                        <div class="mock-bar-label"><span>Agency Cold List</span><span>52%</span></div>
+                        <div class="mock-bar-track"><div class="mock-bar-fill" style="--w:52%;--d:0.8s"></div></div>
+                    </div>
+                    <div class="mock-bar-row">
+                        <div class="mock-bar-label"><span>Enterprise Warm-Up</span><span>79%</span></div>
+                        <div class="mock-bar-track"><div class="mock-bar-fill" style="--w:79%;--d:1.0s"></div></div>
+                    </div>
+                </div>
+                <div class="mock-feed">
+                    <div class="mock-feed-row">
+                        <div class="feed-dot feed-dot-green"></div>
+                        <span>sarah@techcorp.io replied — Interested in pricing</span>
+                        <span class="feed-time">2m</span>
+                    </div>
+                    <div class="mock-feed-row">
+                        <div class="feed-dot feed-dot-blue"></div>
+                        <span>Sent 47 emails · SaaS Outreach batch #12</span>
+                        <span class="feed-time">5m</span>
+                    </div>
+                    <div class="mock-feed-row">
+                        <div class="feed-dot feed-dot-amber"></div>
+                        <span>mark@agency.com opened · Enterprise Warm-Up</span>
+                        <span class="feed-time">9m</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+    <div class="section-header reveal">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Everything you need to scale outbound</h2>
+        <p class="section-sub">One platform for campaigns, replies, contacts, and analytics — nothing bolted on.</p>
+    </div>
     <div class="features-grid">
-        <div class="feature-card">
+        <div class="feature-card reveal">
             <div class="feature-icon">🧠</div>
-            <h3>AI Smart Compose</h3>
-            <p>Gemini-powered engine analyzes your target's industry to write copy that actually converts.</p>
+            <h3>AI Personalization</h3>
+            <p>Gemini AI analyzes each prospect and writes copy that sounds hand-crafted, not templated.</p>
         </div>
-        <div class="feature-card">
-            <div class="feature-icon">⏳</div>
-            <h3>Intelligent Drip</h3>
-            <p>One-by-one sending with random delays between 3-7 minutes to mimic human behavior.</p>
+        <div class="feature-card reveal">
+            <div class="feature-icon">📨</div>
+            <h3>Smart Drip Engine</h3>
+            <p>One-by-one sending with human-like delays (3–7 min) so you never trigger spam filters.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card reveal">
             <div class="feature-icon">🛡️</div>
-            <h3>Spam Shield</h3>
-            <p>Real-time detection of 50+ spam trigger words and built-in MX record verification.</p>
+            <h3>Deliverability Shield</h3>
+            <p>Real-time MX validation, 50+ spam-word detection, and domain warmup built in.</p>
         </div>
-        <div class="feature-card">
-            <div class="feature-icon">🔄</div>
+        <div class="feature-card reveal">
+            <div class="feature-icon">📥</div>
             <h3>Reply Tracking</h3>
-            <p>Sync multiple IMAP inboxes and automatically categorize leads when they respond.</p>
+            <p>Sync IMAP inboxes and auto-categorize replies as Interested, Not Interested, or Follow-up.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card reveal">
+            <div class="feature-icon">👥</div>
+            <h3>Multi-User Ready</h3>
+            <p>Each user gets fully isolated credentials and campaigns. Built for agencies and teams.</p>
+        </div>
+        <div class="feature-card reveal">
             <div class="feature-icon">📊</div>
             <h3>Live Analytics</h3>
-            <p>Track open rates, replies, and click-throughs in real-time with stunning visuals.</p>
+            <p>Track sent, opened, replied, and bounced in real-time. Export any list with one click.</p>
         </div>
-        <div class="feature-card">
-            <div class="feature-icon">🌐</div>
-            <h3>Multi-Domain Support</h3>
-            <p>Rotate between dozens of sending domains to keep your primary inbox clean.</p>
+        <div class="feature-card reveal">
+            <div class="feature-icon">📋</div>
+            <h3>Flexible Import</h3>
+            <p>Import contacts from CSV, paste emails directly, or sync from Google Sheets automatically.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-icon">🔒</div>
+            <h3>Encrypted Credentials</h3>
+            <p>All SMTP passwords and API keys are Fernet-encrypted at rest. Your keys, your control.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-icon">⚙️</div>
+            <h3>Template Engine</h3>
+            <p>Rich HTML templates with merge tags for name, org, and any custom field you define.</p>
         </div>
     </div>
+</section>
 
-    <section class="cta-section">
-        <div class="cta-card">
-            <h2>Ready to dominate the inbox?</h2>
-            <p>Join 500+ agencies scaling their outbound with BulkReach Pro.</p>
-            <a href="/register.html" class="btn btn-xl" style="background: #fff; color: #000; border: none; font-weight: 800;">Start Your Free Campaign</a>
+<!-- HOW IT WORKS -->
+<section id="how">
+    <div class="section-header reveal" style="text-align:center;">
+        <div class="section-label" style="text-align:center;">How it works</div>
+        <h2 class="section-title" style="margin:0 auto 14px;">From zero to campaign in minutes</h2>
+        <p class="section-sub" style="margin:0 auto;">No complex setup. Add your SMTP, upload contacts, pick a template, and send.</p>
+    </div>
+    <div class="steps">
+        <div class="step reveal">
+            <div class="step-num">1</div>
+            <h3>Connect SMTP</h3>
+            <p>Add your Gmail, Outlook, or any SMTP provider. Credentials are encrypted instantly.</p>
         </div>
-    </section>
-
-    <footer class="footer">
-        <div class="logo" style="-webkit-text-fill-color: #9ca3af;">BulkReach.Pro</div>
-        <p>&copy; 2026 BulkReach Pro. All rights reserved.</p>
-        <div style="display:flex; gap:24px;">
-            <a href="#" style="color:inherit; text-decoration:none;">Terms</a>
-            <a href="#" style="color:inherit; text-decoration:none;">Privacy</a>
+        <div class="step reveal">
+            <div class="step-num">2</div>
+            <h3>Import Contacts</h3>
+            <p>Upload CSV, paste emails, or sync from Google Sheets. Emails are auto-validated on import.</p>
         </div>
-    </footer>
+        <div class="step reveal">
+            <div class="step-num">3</div>
+            <h3>Launch Campaign</h3>
+            <p>Pick a template, set your daily limit and delay, and let the AI drip engine do the rest.</p>
+        </div>
+    </div>
+</section>
 
-    <script>
-        // Smooth scroll for nav links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
-    </script>
+<!-- CTA BAND -->
+<div class="cta-band">
+    <h2>Ready to book more meetings?</h2>
+    <p>Join agencies scaling their outbound with BulkReach Pro.</p>
+    <div class="cta-actions">
+        <a href="/register.html" class="btn btn-white btn-lg">Create free account →</a>
+        <a href="/login.html"    class="btn btn-outline-white btn-lg">Sign in</a>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <span class="footer-logo">BulkReach<span>.Pro</span></span>
+    <span>&copy; 2026 BulkReach Pro. All rights reserved.</span>
+    <div class="footer-links">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+    </div>
+</footer>
+
+<script>
+/* ── Mobile menu ── */
+const ham = document.getElementById('ham');
+const menu = document.getElementById('mobileMenu');
+ham.addEventListener('click', () => {
+    const open = menu.classList.toggle('open');
+    ham.classList.toggle('open', open);
+});
+document.querySelectorAll('.mobile-menu a').forEach(a => {
+    a.addEventListener('click', () => {
+        menu.classList.remove('open');
+        ham.classList.remove('open');
+    });
+});
+
+/* ── Smooth scroll ── */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
+    });
+});
+
+/* ── Scroll reveal ── */
+const ro = new IntersectionObserver(entries => {
+    entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+            const siblings = [...entry.target.parentElement.querySelectorAll('.reveal')];
+            const delay = Math.min(siblings.indexOf(entry.target) * 80, 320);
+            entry.target.style.transitionDelay = delay + 'ms';
+            entry.target.classList.add('visible');
+            ro.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
+
+/* ── Counter animation ── */
+function counter(el, target, ms) {
+    const start = performance.now();
+    (function tick(now) {
+        const p = Math.min((now - start) / ms, 1);
+        const e = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.floor(e * target).toLocaleString();
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = target.toLocaleString();
+    })(start);
+}
+const dashObs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+        counter(document.getElementById('ms1'), 3847, 1200);
+        counter(document.getElementById('ms2'), 1024, 1000);
+        counter(document.getElementById('ms3'), 213, 900);
+        dashObs.disconnect();
+    }
+}, { threshold: 0.3 });
+const dw = document.querySelector('.dashboard-wrap');
+if (dw) dashObs.observe(dw);
+</script>
 </body>
 </html>

@@ -52,6 +52,14 @@
                     <div style="font-size:12px; font-weight:600; color:var(--admin-accent); margin-bottom:4px;">ADMIN &bull; OVERVIEW</div>
                     <h1 class="page-title">System Status</h1>
                 </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="seedTemplates()" class="btn btn-secondary btn-sm" id="seedBtn" title="Insert 5 global starter templates visible to all users">
+                        🎨 Seed Templates
+                    </button>
+                    <button onclick="deleteGlobalTemplates()" class="btn btn-ghost btn-sm" title="Remove all global templates">
+                        🗑 Clear Global Templates
+                    </button>
+                </div>
             </header>
 
             <div class="stats-grid" id="statsGrid" style="grid-template-columns: repeat(6, 1fr);">
@@ -60,7 +68,7 @@
                 <div class="stat-card"><div class="lbl">Emails Today</div><div class="val" id="statEmails">...</div></div>
                 <div class="stat-card"><div class="lbl">Running Jobs</div><div class="val" id="statJobs">...</div></div>
                 <div class="stat-card"><div class="lbl">Failed 24h</div><div class="val" id="statFailed">...</div></div>
-                <div class="stat-card"><div class="lbl">Replies Today</div><div class="val" id="statReplies">...</div></div>
+                <div class="stat-card"><div class="lbl">New This Week</div><div class="val" id="statReplies">...</div></div>
             </div>
 
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
@@ -104,8 +112,9 @@
         
         async function loadAdminDashboard() {
             try {
-                const payload = api.getTokenPayload();
-                document.getElementById('userName').textContent = payload.sub.substring(0,8);
+                const me = await api.get('/auth/me');
+                document.getElementById('userName').textContent = me.name || me.email || 'Admin';
+                document.getElementById('userAvatar').textContent = (me.name || 'A')[0].toUpperCase();
 
                 document.getElementById('logoutBtn').addEventListener('click', (e) => {
                     e.preventDefault();
@@ -116,17 +125,17 @@
                 const stats = await api.get('/admin/stats');
                 document.getElementById('statUsers').textContent = stats.total_users || 0;
                 document.getElementById('statActive').textContent = stats.active_users || 0;
-                document.getElementById('statEmails').textContent = stats.emails_today || 0;
-                document.getElementById('statJobs').textContent = stats.running_jobs || 0;
-                document.getElementById('statFailed').textContent = stats.failed_24h || 0;
-                document.getElementById('statReplies').textContent = stats.replies_today || 0;
+                document.getElementById('statEmails').textContent = stats.total_emails_today || 0;
+                document.getElementById('statJobs').textContent = stats.active_jobs_running || 0;
+                document.getElementById('statFailed').textContent = stats.failed_jobs_last_24h || 0;
+                document.getElementById('statReplies').textContent = stats.new_users_this_week || 0;
 
                 const tBody = document.getElementById('topUsersBody');
                 tBody.innerHTML = '';
-                if(!stats.top_users || stats.top_users.length === 0) {
+                if(!stats.top_active_users || stats.top_active_users.length === 0) {
                     tBody.innerHTML = '<tr><td colspan="2" style="text-align:center">No active users today.</td></tr>';
                 } else {
-                    stats.top_users.slice(0,5).forEach(u => {
+                    stats.top_active_users.slice(0,5).forEach(u => {
                         tBody.innerHTML += `<tr>
                             <td><div style="font-weight:500">${u.name}</div><div style="font-size:12px;color:var(--text-muted)">${u.email}</div></td>
                             <td style="font-weight:600; color:var(--admin-accent)">${u.sent_today}</td>
@@ -155,6 +164,24 @@
             }
         }
         
+        async function seedTemplates() {
+            const btn = document.getElementById('seedBtn');
+            btn.disabled = true; btn.textContent = '⏳ Seeding…';
+            try {
+                const res = await api.post('/admin/seed-templates', {});
+                alert(res.message);
+            } catch (e) { alert(e.message || 'Seed failed'); }
+            finally { btn.disabled = false; btn.textContent = '🎨 Seed Templates'; }
+        }
+
+        async function deleteGlobalTemplates() {
+            if (!confirm('Delete ALL global templates? Users will lose access to them.')) return;
+            try {
+                const res = await api.delete('/admin/seed-templates');
+                alert(res.message);
+            } catch (e) { alert(e.message || 'Delete failed'); }
+        }
+
         loadAdminDashboard();
     </script>
 </body>
