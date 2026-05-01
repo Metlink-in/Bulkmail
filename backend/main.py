@@ -113,15 +113,17 @@ app.include_router(replies_router, prefix="/api/replies", tags=["replies"])
 @app.get("/health", tags=["system"])
 async def health_check():
     db_connected = False
+    db_error = None
     try:
         db = await get_db()
-        db_connected = db is not None
-    except Exception:
-        pass
-        
+        await db.command("ping")
+        db_connected = True
+    except Exception as e:
+        db_error = str(e)
+
     return {
-        "status": "ok",
+        "status": "ok" if db_connected else "degraded",
         "env": settings.APP_ENV,
         "db_connected": db_connected,
-        "scheduler_running": True
+        "db_error": db_error,
     }
