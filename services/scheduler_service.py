@@ -1,15 +1,15 @@
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+﻿from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.date import DateTrigger
-from backend.database import get_db
+from database import get_db
 from datetime import datetime
 import asyncio
 
 scheduler = AsyncIOScheduler()
 
 async def check_and_queue_pending_jobs(db):
-    from backend.utils.helpers import get_current_timestamp
+    from utils.helpers import get_current_timestamp
     now = get_current_timestamp()
     
     cursor = db.mail_jobs.find({
@@ -46,7 +46,7 @@ async def stop_scheduler():
         scheduler.shutdown()
 
 async def process_mail_job_wrapper(job_id: str):
-    from backend.services.mail_service import process_mail_job
+    from services.mail_service import process_mail_job
     db = await get_db()
     await process_mail_job(db, job_id)
 
@@ -70,7 +70,7 @@ async def schedule_recurring(db, task_id: str, cron_expression: str):
 
 async def create_and_run_recurring_job(db, task_id: str):
     # Fetch scheduled_task, create mail_job, run
-    from backend.utils.helpers import get_current_timestamp
+    from utils.helpers import get_current_timestamp
     import uuid
     task = await db.scheduled_tasks.find_one({"_id": task_id})
     if not task or not task.get("is_active"):

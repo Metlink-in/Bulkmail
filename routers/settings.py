@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import aiosmtplib
@@ -7,10 +7,10 @@ import ssl
 import asyncio
 import time
 
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_user, require_admin
-from backend.utils.helpers import encrypt_secret, decrypt_secret, json_safe
-from backend.config import settings
+from database import get_db
+from middleware.auth_middleware import require_user, require_admin
+from utils.helpers import encrypt_secret, decrypt_secret, json_safe
+from config import settings
 
 router = APIRouter(tags=["settings"])
 

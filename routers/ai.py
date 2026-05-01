@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends
+﻿from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_user
-from backend.services.ai_service import compose_email, improve_email
+from database import get_db
+from middleware.auth_middleware import require_user
+from services.ai_service import compose_email, improve_email
 
 router = APIRouter(tags=["ai"])
 

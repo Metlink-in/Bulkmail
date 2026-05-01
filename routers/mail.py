@@ -1,17 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+﻿from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta, timezone
 import uuid
 
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_user
-from backend.services.mail_service import (
+from database import get_db
+from middleware.auth_middleware import require_user
+from services.mail_service import (
     pause_job, resume_job, cancel_job, get_job_status,
     send_single_email, build_email_message, get_user_smtp_settings
 )
-from backend.services.scheduler_service import schedule_job
-from backend.utils.helpers import get_current_timestamp, json_safe
+from services.scheduler_service import schedule_job
+from utils.helpers import get_current_timestamp, json_safe
 
 router = APIRouter(tags=["mail"])
 

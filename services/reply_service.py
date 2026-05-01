@@ -1,11 +1,11 @@
-import imaplib
+﻿import imaplib
 import email
 from email.header import decode_header
 import uuid
 import asyncio
 from datetime import datetime, timezone
-from backend.utils.helpers import decrypt_secret, get_current_timestamp
-from backend.config import settings
+from utils.helpers import decrypt_secret, get_current_timestamp
+from config import settings
 
 def decode_mime_words(s):
     if not s: return ""

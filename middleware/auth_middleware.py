@@ -1,8 +1,8 @@
-from fastapi import Depends, HTTPException, status
+﻿from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from typing import Dict, Any
-from backend.database import get_db
-from backend.services.auth_service import verify_token, is_token_revoked
+from database import get_db
+from services.auth_service import verify_token, is_token_revoked
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 from bson.errors import InvalidId

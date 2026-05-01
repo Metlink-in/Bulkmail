@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+﻿from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from typing import Dict, Any, Optional
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_user
-from backend.services.reply_service import fetch_replies_for_user
+from database import get_db
+from middleware.auth_middleware import require_user
+from services.reply_service import fetch_replies_for_user
 
 router = APIRouter(tags=["replies"])
 

@@ -1,7 +1,7 @@
-import certifi
+﻿import certifi
 import bcrypt as _bcrypt
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from backend.config import settings
+from config import settings
 from datetime import datetime, timezone
 
 client: AsyncIOMotorClient = None

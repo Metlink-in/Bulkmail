@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import uuid
 from datetime import datetime
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_user
-from backend.utils.helpers import get_current_timestamp
-from backend.services.scheduler_service import schedule_recurring, cancel_scheduled_job
+from database import get_db
+from middleware.auth_middleware import require_user
+from utils.helpers import get_current_timestamp
+from services.scheduler_service import schedule_recurring, cancel_scheduled_job
 
 router = APIRouter(tags=["schedule"])
 

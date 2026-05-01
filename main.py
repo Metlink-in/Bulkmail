@@ -1,32 +1,30 @@
-import os
-import sys
+﻿import os
+import pathlib
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-# Add parent directory to path to allow imports from backend
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from backend.config import settings
-from backend.database import connect_db, close_db, get_db
-from backend.services.scheduler_service import start_scheduler, stop_scheduler
+from config import settings
+from database import connect_db, close_db, get_db
+from services.scheduler_service import start_scheduler, stop_scheduler
 
 # Routers
-from backend.routers.auth import router as auth_router
-from backend.routers.user import router as user_router
-from backend.routers.admin import router as admin_router
-from backend.routers.settings import router as settings_router
-from backend.routers.contacts import router as contacts_router
-from backend.routers.mail import router as mail_router
-from backend.routers.ai import router as ai_router
-from backend.routers.template import router as template_router
-from backend.routers.schedule import router as schedule_router
-from backend.routers.replies import router as replies_router
+from routers.auth import router as auth_router
+from routers.user import router as user_router
+from routers.admin import router as admin_router
+from routers.settings import router as settings_router
+from routers.contacts import router as contacts_router
+from routers.mail import router as mail_router
+from routers.ai import router as ai_router
+from routers.template import router as template_router
+from routers.schedule import router as schedule_router
+from routers.replies import router as replies_router
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +107,11 @@ app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
 app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
 app.include_router(schedule_router, prefix="/api/schedule", tags=["schedule"])
 app.include_router(replies_router, prefix="/api/replies", tags=["replies"])
+
+# Serve frontend static files (local dev). On Vercel, CDN handles this.
+_public = pathlib.Path(__file__).parent / "public"
+if _public.exists():
+    app.mount("/", StaticFiles(directory=str(_public), html=True), name="static")
 
 @app.get("/health", tags=["system"])
 async def health_check():

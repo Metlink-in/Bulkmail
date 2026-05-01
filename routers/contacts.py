@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+﻿from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_user
-from backend.services.contact_service import (
+from database import get_db
+from middleware.auth_middleware import require_user
+from services.contact_service import (
     parse_csv, import_from_sheets, save_contact_list,
     get_contact_lists, get_contact_list, update_contact, delete_contact_list
 )
-from backend.services.validation_service import validate_email_list
-from backend.utils.helpers import json_safe
+from services.validation_service import validate_email_list
+from utils.helpers import json_safe
 import uuid
 from datetime import datetime, timezone
 
@@ -154,7 +154,7 @@ async def add_single_contact(list_id: str, data: Dict[str, Any], current_user: D
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
         
-    from backend.services.validation_service import validate_email
+    from services.validation_service import validate_email
     validation = await validate_email(email)
     
     contact = {
@@ -177,7 +177,7 @@ async def update_single_contact(list_id: str, contact_id: str, data: Dict[str, A
     user_id = str(current_user["_id"])
 
     if "email" in data:
-        from backend.services.validation_service import validate_email
+        from services.validation_service import validate_email
         validation = await validate_email(data["email"])
         data["email_status"] = validation["status"]
 

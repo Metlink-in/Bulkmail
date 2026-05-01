@@ -1,8 +1,8 @@
-import io
+﻿import io
 import csv
 from datetime import datetime, timezone
 import uuid
-from backend.services.validation_service import validate_email
+from services.validation_service import validate_email
 
 def _clean(val):
     v = str(val).strip() if val is not None else ""

@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+﻿from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
 from typing import Dict, Any
-from backend.models.user import UserCreate, UserLogin, UserResponse
-from backend.database import get_db
-from backend.services.auth_service import (
+from models.user import UserCreate, UserLogin, UserResponse
+from database import get_db
+from services.auth_service import (
     register_user, authenticate_user, create_access_token, create_refresh_token,
     verify_token, revoke_token
 )
-from backend.middleware.auth_middleware import oauth2_scheme, require_user
-from backend.middleware.audit_middleware import log_audit
+from middleware.auth_middleware import oauth2_scheme, require_user
+from middleware.audit_middleware import log_audit
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from slowapi import Limiter
 from slowapi.util import get_remote_address

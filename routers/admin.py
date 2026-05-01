@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+﻿from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone, timedelta
 import uuid
 from jose import jwt
 
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_admin
-from backend.utils.helpers import hash_password, get_current_timestamp, json_safe
-from backend.config import settings
+from database import get_db
+from middleware.auth_middleware import require_admin
+from utils.helpers import hash_password, get_current_timestamp, json_safe
+from config import settings
 
 router = APIRouter(tags=["admin"])
 
@@ -77,7 +77,7 @@ async def get_users(
 
 @router.get("/users/{user_id}")
 async def get_user_details(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.middleware.auth_middleware import parse_object_id
+    from middleware.auth_middleware import parse_object_id
     u = await db.users.find_one({"_id": parse_object_id(user_id)})
     if not u:
         u = await db.users.find_one({"email": user_id})
@@ -123,7 +123,7 @@ async def create_user(body: UserCreateAdmin, current_admin: Dict[str, Any] = Dep
 
 @router.put("/users/{user_id}")
 async def update_user(user_id: str, body: UserUpdateAdmin, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.middleware.auth_middleware import parse_object_id
+    from middleware.auth_middleware import parse_object_id
     uid = parse_object_id(user_id)
     
     update_data = body.dict(exclude_unset=True)
@@ -144,7 +144,7 @@ async def update_user(user_id: str, body: UserUpdateAdmin, current_admin: Dict[s
 
 @router.delete("/users/{user_id}")
 async def delete_user(request: Request, user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.middleware.auth_middleware import parse_object_id
+    from middleware.auth_middleware import parse_object_id
     uid = parse_object_id(user_id)
     u = await db.users.find_one({"_id": uid})
     if not u:
@@ -162,7 +162,7 @@ async def delete_user(request: Request, user_id: str, current_admin: Dict[str, A
     
     await db.users.delete_one({"_id": uid})
     
-    from backend.middleware.audit_middleware import log_audit
+    from middleware.audit_middleware import log_audit
     admin_id = str(current_admin["_id"])
     await log_audit(db, admin_id, "user_crud_by_admin", "user", f"Deleted user {id_str}", request)
     
@@ -170,14 +170,14 @@ async def delete_user(request: Request, user_id: str, current_admin: Dict[str, A
 
 @router.post("/users/{user_id}/deactivate")
 async def deactivate_user(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.middleware.auth_middleware import parse_object_id
+    from middleware.auth_middleware import parse_object_id
     uid = parse_object_id(user_id)
     await db.users.update_one({"_id": uid}, {"$set": {"is_active": False}})
     return {"message": "User deactivated"}
 
 @router.post("/users/{user_id}/activate")
 async def activate_user(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.middleware.auth_middleware import parse_object_id
+    from middleware.auth_middleware import parse_object_id
     uid = parse_object_id(user_id)
     await db.users.update_one({"_id": uid}, {"$set": {"is_active": True}})
     return {"message": "User activated"}
@@ -225,7 +225,7 @@ async def get_system_stats(current_admin: Dict[str, Any] = Depends(require_admin
     
     top_users = []
     for tu in top_users_agg:
-        from backend.middleware.auth_middleware import parse_object_id
+        from middleware.auth_middleware import parse_object_id
         u = await db.users.find_one({"_id": parse_object_id(tu["_id"])})
         if u:
             top_users.append({
@@ -281,7 +281,7 @@ async def get_admin_mail_jobs(
     
     for j in jobs:
         j["id"] = str(j.pop("_id"))
-        from backend.middleware.auth_middleware import parse_object_id
+        from middleware.auth_middleware import parse_object_id
         uid = parse_object_id(j["user_id"])
         u = await db.users.find_one({"_id": uid})
         if u:
@@ -323,8 +323,8 @@ async def get_user_settings_admin(user_id: str, current_admin: Dict[str, Any] = 
     
     g_key = creds.get("gemini_api_key")
     if g_key:
-        from backend.utils.helpers import decrypt_secret
-        from backend.config import settings
+        from utils.helpers import decrypt_secret
+        from config import settings
         dec = decrypt_secret(g_key, settings.ENCRYPTION_KEY)
         if len(dec) > 6:
             creds["gemini_api_key"] = "••••••••" + dec[-6:]
@@ -354,7 +354,7 @@ async def get_live_monitoring(current_admin: Dict[str, Any] = Depends(require_ad
     
     running_jobs = []
     for j in running_jobs_docs:
-        from backend.middleware.auth_middleware import parse_object_id
+        from middleware.auth_middleware import parse_object_id
         uid = parse_object_id(j["user_id"])
         u = await db.users.find_one({"_id": uid})
         t = await db.mail_templates.find_one({"_id": j.get("template_id")})
@@ -399,7 +399,7 @@ async def get_live_monitoring(current_admin: Dict[str, Any] = Depends(require_ad
 
 @router.post("/users/{user_id}/reset-password")
 async def reset_user_password(user_id: str, body: ResetPasswordAdmin, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.middleware.auth_middleware import parse_object_id
+    from middleware.auth_middleware import parse_object_id
     uid = parse_object_id(user_id)
     if not body.new_password or len(body.new_password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
@@ -415,7 +415,7 @@ async def reset_user_password(user_id: str, body: ResetPasswordAdmin, current_ad
 
 @router.get("/users/{user_id}/smtp-profiles")
 async def get_user_smtp_profiles(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.utils.helpers import decrypt_secret
+    from utils.helpers import decrypt_secret
     profiles = await db.user_credentials.find({"user_id": user_id, "name": {"$exists": True}}).to_list(100)
     result = []
     for p in profiles:
@@ -437,7 +437,7 @@ async def get_user_smtp_profiles(user_id: str, current_admin: Dict[str, Any] = D
 
 @router.post("/seed-templates")
 async def seed_global_templates(current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.templates_data import GLOBAL_TEMPLATES
+    from templates_data import GLOBAL_TEMPLATES
     existing = await db.mail_templates.count_documents({"is_global": True})
     if existing > 0:
         return {"message": f"{existing} global templates already exist. Delete them in MongoDB first to re-seed.", "count": existing}
@@ -467,7 +467,7 @@ async def delete_global_templates(current_admin: Dict[str, Any] = Depends(requir
 
 @router.get("/users/{user_id}/impersonate")
 async def impersonate_user(user_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    from backend.middleware.auth_middleware import parse_object_id
+    from middleware.auth_middleware import parse_object_id
     uid = parse_object_id(user_id)
     u = await db.users.find_one({"_id": uid})
     if not u:

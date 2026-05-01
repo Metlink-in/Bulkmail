@@ -1,13 +1,13 @@
-"""
+﻿"""
 Seed global starter templates into MongoDB.
 Run once after first boot:  python -m backend.seeds
 """
 import asyncio
 import uuid
 from motor.motor_asyncio import AsyncIOMotorClient
-from backend.config import settings
-from backend.utils.helpers import get_current_timestamp
-from backend.templates_data import GLOBAL_TEMPLATES
+from config import settings
+from utils.helpers import get_current_timestamp
+from templates_data import GLOBAL_TEMPLATES
 
 
 async def seed_templates():

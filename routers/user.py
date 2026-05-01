@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_user
-from backend.models.user import UserResponse
-from backend.utils.helpers import verify_password, hash_password
+from database import get_db
+from middleware.auth_middleware import require_user
+from models.user import UserResponse
+from utils.helpers import verify_password, hash_password
 from datetime import datetime, timezone, timedelta
 
 router = APIRouter(tags=["user"])

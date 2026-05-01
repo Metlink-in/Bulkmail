@@ -1,11 +1,11 @@
-from datetime import timedelta
+﻿from datetime import timedelta
 from typing import Optional, Dict, Any
 import uuid
 from jose import jwt, JWTError
 from fastapi import HTTPException, status
-from backend.config import settings
-from backend.utils.helpers import hash_password, verify_password, get_current_timestamp
-from backend.models.user import UserCreate
+from config import settings
+from utils.helpers import hash_password, verify_password, get_current_timestamp
+from models.user import UserCreate
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()

@@ -1,8 +1,8 @@
-import json
+﻿import json
 import httpx
 from fastapi import HTTPException
-from backend.config import settings
-from backend.utils.helpers import decrypt_secret
+from config import settings
+from utils.helpers import decrypt_secret
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 

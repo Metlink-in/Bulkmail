@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import time
 import uuid
 import base64
@@ -9,9 +9,9 @@ from email.mime.base import MIMEBase
 from email import encoders
 import aiosmtplib
 
-from backend.utils.helpers import decrypt_secret
-from backend.config import settings
-from backend.services.validation_service import validate_email
+from utils.helpers import decrypt_secret
+from config import settings
+from services.validation_service import validate_email
 
 MIN_DELAY_SECONDS = 60
 DEFAULT_DELAY_SECONDS = 300
@@ -173,7 +173,7 @@ async def send_single_email(smtp_settings: dict, message: MIMEMultipart, to_emai
         return {"success": False, "message_id": None, "error": str(e)}
 
 async def process_mail_job(db, job_id: str):
-    from backend.utils.helpers import get_current_timestamp
+    from utils.helpers import get_current_timestamp
     
     job = await db.mail_jobs.find_one({"_id": job_id})
     if not job or job["status"] not in ["queued", "paused"]:
@@ -355,7 +355,7 @@ async def get_job_status(db, user_id, job_id) -> dict:
     pct = (sent + failed) / total * 100 if total > 0 else 0
     
     started_at = job.get("updated_at")
-    from backend.utils.helpers import get_current_timestamp
+    from utils.helpers import get_current_timestamp
     from datetime import timezone as _tz
     elapsed = 0
     if started_at:

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+﻿from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 import uuid
-from backend.database import get_db
-from backend.middleware.auth_middleware import require_user
-from backend.utils.helpers import sanitize_html, get_current_timestamp
+from database import get_db
+from middleware.auth_middleware import require_user
+from utils.helpers import sanitize_html, get_current_timestamp
 
 router = APIRouter(tags=["template"])
 
