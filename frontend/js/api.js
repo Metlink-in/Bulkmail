@@ -1,4 +1,4 @@
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8000' : '';
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : '';
 
 const api = {
     getTokens() {
@@ -44,7 +44,8 @@ const api = {
         try {
             const res = await fetch(`${API_BASE}/api/auth/refresh`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${refresh}` }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refresh })
             });
             if (!res.ok) throw new Error("Refresh failed");
             const data = await res.json();
