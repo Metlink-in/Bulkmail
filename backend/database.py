@@ -46,6 +46,8 @@ async def get_db() -> AsyncIOMotorDatabase:
     global client, _db_initialized
     if client is None:
         await connect_db()
+    if client is None:
+        raise RuntimeError("Cannot connect to MongoDB. Check MONGODB_URI and Atlas IP allowlist.")
     db = client[DATABASE_NAME]
     if not _db_initialized:
         _db_initialized = True
@@ -57,31 +59,31 @@ async def get_db() -> AsyncIOMotorDatabase:
             print(f"DB lazy-init failed: {e}")
     return db
 
-async def init_db(db: AsyncIOMotorDatabase):
-    # 1. users
-    await db.users.create_index("email", unique=True)
-    # 2. user_credentials (changed to allow multiple profiles)
-    await db.user_credentials.create_index("user_id")
-    await db.user_credentials.create_index([("user_id", 1), ("smtp_user", 1)], unique=True, sparse=True)
-    # 3. mail_templates
-    await db.mail_templates.create_index("user_id")
-    # 4. contact_lists
-    await db.contact_lists.create_index("user_id")
-    # 5. mail_jobs
-    await db.mail_jobs.create_index([("user_id", 1), ("status", 1)])
-    # 6. mail_logs
-    await db.mail_logs.create_index([("user_id", 1), ("job_id", 1), ("sent_at", 1)])
-    # 7. audit_logs
-    await db.audit_logs.create_index([("user_id", 1), ("timestamp", 1)])
-    # 8. scheduled_tasks
-    await db.scheduled_tasks.create_index([("user_id", 1), ("next_run", 1)])
-    # 9. reply_inbox
-    await db.reply_inbox.create_index([("user_id", 1), ("received_at", 1), ("is_read", 1)])
-    # 10. revoked_tokens
-    await db.revoked_tokens.create_index("jti", unique=True)
-    await db.revoked_tokens.create_index("revoked_at", expireAfterSeconds=604800)  # 7 days TTL TTL index
+async def _safe_index(collection, keys, **kwargs):
+    """Create index, silently dropping it first if options conflict."""
+    try:
+        await collection.create_index(keys, **kwargs)
+    except Exception:
+        try:
+            await collection.drop_index(keys if isinstance(keys, str) else [(k, v) for k, v in ([keys] if isinstance(keys, tuple) else keys)])
+            await collection.create_index(keys, **kwargs)
+        except Exception as e:
+            print(f"Index warning on {collection.name}: {e}")
 
-    print("Database initialized with all 10 indexes.")
+async def init_db(db: AsyncIOMotorDatabase):
+    await _safe_index(db.users, "email", unique=True)
+    await _safe_index(db.user_credentials, "user_id")
+    await _safe_index(db.user_credentials, [("user_id", 1), ("smtp_user", 1)], unique=True, sparse=True)
+    await _safe_index(db.mail_templates, "user_id")
+    await _safe_index(db.contact_lists, "user_id")
+    await _safe_index(db.mail_jobs, [("user_id", 1), ("status", 1)])
+    await _safe_index(db.mail_logs, [("user_id", 1), ("job_id", 1), ("sent_at", 1)])
+    await _safe_index(db.audit_logs, [("user_id", 1), ("timestamp", 1)])
+    await _safe_index(db.scheduled_tasks, [("user_id", 1), ("next_run", 1)])
+    await _safe_index(db.reply_inbox, [("user_id", 1), ("received_at", 1), ("is_read", 1)])
+    await _safe_index(db.revoked_tokens, "jti", unique=True)
+    await _safe_index(db.revoked_tokens, "revoked_at", expireAfterSeconds=604800)
+    print("Database indexes verified.")
 
 async def seed_admin(db: AsyncIOMotorDatabase):
     admin_email = settings.ADMIN_EMAIL

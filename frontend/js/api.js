@@ -49,7 +49,7 @@ const api = {
             });
             if (!res.ok) throw new Error("Refresh failed");
             const data = await res.json();
-            this.setTokens(data.access_token, data.refresh_token);
+            this.setTokens(data.access_token, null);
             return data.access_token;
         } catch (e) {
             this.clearTokens();
