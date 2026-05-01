@@ -1,10 +1,8 @@
 import certifi
+import bcrypt as _bcrypt
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from passlib.context import CryptContext
 from backend.config import settings
 from datetime import datetime, timezone
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 client: AsyncIOMotorClient = None
 DATABASE_NAME = settings.MONGODB_DB_NAME
@@ -75,7 +73,7 @@ async def seed_admin(db: AsyncIOMotorDatabase):
         print("ADMIN_EMAIL or ADMIN_PASSWORD not configured — skipping admin seed.")
         return
 
-    hashed_password = pwd_context.hash(admin_password)
+    hashed_password = _bcrypt.hashpw(admin_password.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
     admin_exists = await db.users.find_one({"email": admin_email})
 
     if not admin_exists:
