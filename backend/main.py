@@ -13,7 +13,7 @@ from slowapi.errors import RateLimitExceeded
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.config import settings
-from backend.database import connect_db, close_db, get_db, init_db, seed_admin
+from backend.database import connect_db, close_db, get_db
 from backend.services.scheduler_service import start_scheduler, stop_scheduler
 
 # Routers
@@ -35,28 +35,28 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    try:
-        await connect_db()
-        db = await get_db()
-        await init_db(db)
-        await seed_admin(db)
-        # Only start scheduler if not in a simple serverless request context if possible, 
-        # but try-except it anyway
+    # On Vercel serverless each invocation is a fresh process — yield immediately
+    # so the function starts accepting requests without waiting for DB/scheduler.
+    # DB init (indexes + admin seed) runs lazily on the first get_db() call.
+    # Scheduler is skipped on Vercel (no persistent process to run background jobs).
+    is_vercel = bool(os.environ.get("VERCEL"))
+    if not is_vercel:
         try:
-            await start_scheduler(db)
-        except Exception as se:
-            logger.error(f"Scheduler failed to start: {se}")
-    except Exception as e:
-        logger.error(f"Startup sequence failed: {e}")
-        
+            await connect_db()
+            db = await get_db()
+            try:
+                await start_scheduler(db)
+            except Exception as se:
+                logger.error(f"Scheduler failed to start: {se}")
+        except Exception as e:
+            logger.error(f"Startup failed: {e}")
     yield
-    # Shutdown
-    try:
-        await stop_scheduler()
-        await close_db()
-    except:
-        pass
+    if not is_vercel:
+        try:
+            await stop_scheduler()
+            await close_db()
+        except:
+            pass
 
 app = FastAPI(title="BulkReach Pro API", lifespan=lifespan)
 app.state.limiter = limiter

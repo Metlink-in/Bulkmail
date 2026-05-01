@@ -11,19 +11,27 @@ async def connect_db():
     global client
     if client is None:
         try:
-            # On Vercel, try with certifi first, fallback to standard if needed
             client = AsyncIOMotorClient(
-                settings.MONGODB_URI, 
+                settings.MONGODB_URI,
                 tlsCAFile=certifi.where(),
-                serverSelectionTimeoutMS=5000
+                serverSelectionTimeoutMS=8000,
+                connectTimeoutMS=8000,
+                socketTimeoutMS=8000,
             )
-            # Ping to verify
             await client.admin.command('ping')
             print("MongoDB connected successfully.")
         except Exception as e:
-            print(f"Primary MongoDB connection failed: {e}. Trying fallback...")
-            client = AsyncIOMotorClient(settings.MONGODB_URI, serverSelectionTimeoutMS=5000)
-            print("MongoDB connected with fallback.")
+            print(f"MongoDB primary connection failed: {e}. Trying without certifi...")
+            try:
+                client = AsyncIOMotorClient(
+                    settings.MONGODB_URI,
+                    serverSelectionTimeoutMS=8000,
+                    connectTimeoutMS=8000,
+                )
+                await client.admin.command('ping')
+                print("MongoDB connected (fallback).")
+            except Exception as e2:
+                print(f"MongoDB fallback also failed: {e2}. Continuing without DB.")
 
 async def close_db():
     global client
@@ -32,11 +40,22 @@ async def close_db():
         client = None
         print("MongoDB client closed.")
 
+_db_initialized = False
+
 async def get_db() -> AsyncIOMotorDatabase:
-    global client
+    global client, _db_initialized
     if client is None:
         await connect_db()
-    return client[DATABASE_NAME]
+    db = client[DATABASE_NAME]
+    if not _db_initialized:
+        _db_initialized = True
+        try:
+            await init_db(db)
+            await seed_admin(db)
+        except Exception as e:
+            _db_initialized = False
+            print(f"DB lazy-init failed: {e}")
+    return db
 
 async def init_db(db: AsyncIOMotorDatabase):
     # 1. users
