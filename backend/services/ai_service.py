@@ -1,17 +1,18 @@
 import json
-import asyncio
-import google.generativeai as genai
+import httpx
 from fastapi import HTTPException
 from backend.config import settings
 from backend.utils.helpers import decrypt_secret
 
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+
 async def get_gemini_api_key(db, user_id: str) -> str:
-    creds = await db.user_credentials.find_one({"user_id": user_id})
+    creds = await db.user_settings.find_one({"user_id": user_id})
     if creds and creds.get("gemini_api_key"):
         return decrypt_secret(creds["gemini_api_key"], settings.ENCRYPTION_KEY)
     if settings.GEMINI_API_KEY:
         return settings.GEMINI_API_KEY
-    raise HTTPException(status_code=400, detail="No Gemini API key configured")
+    raise HTTPException(status_code=400, detail="No Gemini API key configured. Add one in Settings.")
 
 def parse_json_from_response(text: str) -> dict:
     text = text.strip()
@@ -22,10 +23,20 @@ def parse_json_from_response(text: str) -> dict:
     if text.endswith("```"):
         text = text[:-3]
     try:
-        data = json.loads(text.strip())
-        return data
+        return json.loads(text.strip())
     except json.JSONDecodeError:
         raise ValueError("Failed to parse valid JSON from AI response")
+
+async def _call_gemini(api_key: str, prompt: str) -> str:
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+    }
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.post(f"{GEMINI_URL}?key={api_key}", json=payload)
+        r.raise_for_status()
+        data = r.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
 async def compose_email(
     db, user_id: str,
@@ -34,59 +45,46 @@ async def compose_email(
     value_prop: str, recipient_name: str = "there"
 ) -> dict:
     api_key = await get_gemini_api_key(db, user_id)
-    genai.configure(api_key=api_key)
-    # Using the requested model parameter, wrapped in a generic flash implementation
-    try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
-    except Exception:
-        model = genai.GenerativeModel("gemini-1.5-flash")
-    
-    PROMPT = f"""
-    You are an expert B2B cold email copywriter.
-    Write a cold outreach email with:
-    - Goal: {goal}
-    - Target industry: {industry}
-    - Tone: {tone}
-    - From: {sender_name} at {sender_company}
-    - Value proposition: {value_prop}
 
-    Requirements:
-    - Subject: under 60 chars, curiosity-driven, high open rate
-    - Body: 3-4 short paragraphs, under 200 words total
-    - Opening: personalized with {{first_name}} placeholder
-    - One clear CTA in last paragraph
-    - Professional signature with {sender_name} and {sender_company}
-    - NO spam words: free, winner, urgent, guaranteed, limited time, act now
+    prompt = f"""You are an expert B2B cold email copywriter.
+Write a cold outreach email with:
+- Goal: {goal}
+- Target industry: {industry}
+- Tone: {tone}
+- From: {sender_name} at {sender_company}
+- Value proposition: {value_prop}
 
-    DESIGN REQUIREMENTS for html_body:
-    - Use a clean, modern B2B look.
-    - Container: Max-width 600px, centered, padding 40px.
-    - Typography: Use system fonts (sans-serif), line-height 1.6, font-size 16px.
-    - Subtle borders or soft shadows for a "card" feel if appropriate.
-    - Use a professional accent color for links and CTA buttons (e.g., a nice blue #2563eb).
-    - Signature should be subtly styled with slightly smaller, muted text.
-    - Ensure it looks GREAT on both mobile and desktop.
+Requirements:
+- Subject: under 60 chars, curiosity-driven, high open rate
+- Body: 3-4 short paragraphs, under 200 words total
+- Opening: personalized with {{first_name}} placeholder
+- One clear CTA in last paragraph
+- Professional signature with {sender_name} and {sender_company}
+- NO spam words: free, winner, urgent, guaranteed, limited time, act now
 
-    Return ONLY valid JSON (no markdown, no backticks, just raw JSON):
-    {{
-      "subject": "...",
-      "html_body": "...",
-      "plain_text": "...",
-      "preview_text": "...",
-      "word_count": 0,
-      "estimated_read_seconds": 0
-    }}
-    html_body must be complete HTML with inline CSS styles for email clients.
-    """
-    
-    response = await asyncio.to_thread(model.generate_content, PROMPT)
-    data = parse_json_from_response(response.text)
-    
-    required_keys = ["subject", "html_body", "plain_text", "preview_text", "word_count", "estimated_read_seconds"]
-    for k in required_keys:
+DESIGN for html_body:
+- Clean modern B2B look, max-width 600px, centered, padding 40px
+- System fonts (sans-serif), line-height 1.6, font-size 16px
+- Professional accent color for links/buttons (#2563eb)
+- Signature with smaller muted text
+- Mobile-friendly
+
+Return ONLY valid JSON (no markdown, no backticks):
+{{
+  "subject": "...",
+  "html_body": "...",
+  "plain_text": "...",
+  "preview_text": "...",
+  "word_count": 0,
+  "estimated_read_seconds": 0
+}}
+html_body must be complete HTML with inline CSS."""
+
+    text = await _call_gemini(api_key, prompt)
+    data = parse_json_from_response(text)
+    for k in ["subject", "html_body", "plain_text", "preview_text", "word_count", "estimated_read_seconds"]:
         if k not in data:
             data[k] = ""
-            
     return data
 
 async def improve_email(
@@ -94,44 +92,33 @@ async def improve_email(
     current_subject: str, current_html_body: str, instruction: str
 ) -> dict:
     api_key = await get_gemini_api_key(db, user_id)
-    genai.configure(api_key=api_key)
-    try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
-    except Exception:
-        model = genai.GenerativeModel("gemini-1.5-flash")
-    
-    PROMPT = f"""
-    You are an expert B2B cold email copywriter.
-    Improve the following email based on this instruction: {instruction}
-    
-    Current Subject: {current_subject}
-    Current Body: {current_html_body}
-    
-    Requirements:
-    - Subject: under 60 chars
-    - Body: under 200 words total
-    - Opening: keep personalization placeholders like {{first_name}}
-    - Maintain or enhance the "Attractive & Professional" B2B styling.
-    - Standardize font-size to 16px and line-height to 1.6 for readability.
-    
-    Return ONLY valid JSON:
-    {{
-      "subject": "...",
-      "html_body": "...",
-      "plain_text": "...",
-      "preview_text": "...",
-      "word_count": 0,
-      "estimated_read_seconds": 0
-    }}
-    html_body must be complete HTML with inline CSS styles for email clients.
-    """
-    
-    response = await asyncio.to_thread(model.generate_content, PROMPT)
-    data = parse_json_from_response(response.text)
-    
-    required_keys = ["subject", "html_body", "plain_text", "preview_text", "word_count", "estimated_read_seconds"]
-    for k in required_keys:
+
+    prompt = f"""You are an expert B2B cold email copywriter.
+Improve the following email based on this instruction: {instruction}
+
+Current Subject: {current_subject}
+Current Body: {current_html_body}
+
+Requirements:
+- Subject: under 60 chars
+- Body: under 200 words total
+- Keep personalization placeholders like {{first_name}}
+- Maintain professional B2B styling, font-size 16px, line-height 1.6
+
+Return ONLY valid JSON:
+{{
+  "subject": "...",
+  "html_body": "...",
+  "plain_text": "...",
+  "preview_text": "...",
+  "word_count": 0,
+  "estimated_read_seconds": 0
+}}
+html_body must be complete HTML with inline CSS."""
+
+    text = await _call_gemini(api_key, prompt)
+    data = parse_json_from_response(text)
+    for k in ["subject", "html_body", "plain_text", "preview_text", "word_count", "estimated_read_seconds"]:
         if k not in data:
             data[k] = ""
-            
     return data

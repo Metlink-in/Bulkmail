@@ -6,8 +6,6 @@ import imaplib
 import ssl
 import asyncio
 import time
-import google.generativeai as genai
-import gspread
 
 from backend.database import get_db
 from backend.middleware.auth_middleware import require_user, require_admin
@@ -330,29 +328,34 @@ async def test_imap(current_user: Dict[str, Any] = Depends(require_user), db = D
 
 @router.post("/ai/test")
 async def test_ai(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    import httpx
     user_id = str(current_user["_id"])
     creds = await db.user_settings.find_one({"user_id": user_id})
     api_key = creds.get("gemini_api_key") if creds else None
-    
+
     if api_key:
         api_key = decrypt_secret(api_key, settings.ENCRYPTION_KEY)
     else:
         api_key = settings.GEMINI_API_KEY
-        
+
     if not api_key:
         raise HTTPException(status_code=400, detail="Gemini API key not configured")
-        
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    payload = {"contents": [{"parts": [{"text": "Say hello in one word"}]}]}
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content("Say hello in one word")
-        return {"success": True, "message": response.text.strip(), "model": "gemini-1.5-flash"}
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(url, json=payload)
+            r.raise_for_status()
+            text = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return {"success": True, "message": text, "model": "gemini-1.5-flash"}
     except Exception as e:
         return {"success": False, "message": str(e), "model": ""}
 
 @router.post("/sheets/test")
 async def test_sheets(body: SheetsTestBody, current_user: Dict[str, Any] = Depends(require_user)):
     try:
+        import gspread
         gc = gspread.api_key(body.api_key)
         spreadsheet = gc.open_by_key(body.sheet_id)
         return {"success": True, "message": "Successfully accessed Google Sheet", "sheet_title": spreadsheet.title}

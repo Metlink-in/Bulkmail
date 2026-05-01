@@ -1,34 +1,29 @@
 import io
-import pandas as pd
-import gspread
+import csv
 from datetime import datetime, timezone
-from bson import ObjectId
 import uuid
 from backend.services.validation_service import validate_email
 
+def _clean(val):
+    v = str(val).strip() if val is not None else ""
+    return None if v.lower() in ("nan", "", "none") else v
+
 async def parse_csv(file_bytes: bytes) -> list[dict]:
-    df = pd.read_csv(io.BytesIO(file_bytes))
+    text = file_bytes.decode("utf-8-sig", errors="replace")
+    reader = csv.DictReader(io.StringIO(text))
     contacts = []
-    
-    # Normalize columns to lowercase
-    df.columns = [str(c).lower().strip() for c in df.columns]
-    
-    for _, row in df.iterrows():
-        row_dict = row.to_dict()
-        email = str(row_dict.get('email', '')).strip()
-        if not email or email.lower() == 'nan':
+    for row in reader:
+        row = {k.lower().strip(): v for k, v in row.items()}
+        email = _clean(row.get("email", ""))
+        if not email or "@" not in email:
             continue
-            
-        name = str(row_dict.get('name', '')).strip()
-        if name.lower() == 'nan': name = None
-        
-        org = str(row_dict.get('org', '')).strip()
-        if org.lower() == 'nan': org = None
-        
-        custom_fields = {k: v for k, v in row_dict.items() if k not in ['email', 'name', 'org'] and str(v).lower() != 'nan'}
-        
+        name = _clean(row.get("name", ""))
+        org  = _clean(row.get("org", ""))
+        custom_fields = {
+            k: v for k, v in row.items()
+            if k not in ("email", "name", "org") and _clean(v)
+        }
         validation = await validate_email(email)
-        
         contacts.append({
             "email": email,
             "name": name,
@@ -36,12 +31,11 @@ async def parse_csv(file_bytes: bytes) -> list[dict]:
             "custom_fields": custom_fields,
             "email_status": validation["status"]
         })
-        
     return contacts
 
 async def import_from_sheets(sheet_url: str, api_key: str, range_name: str) -> list[dict]:
-    # gspread uses API key
     try:
+        import gspread
         gc = gspread.api_key(api_key)
         sheet_id = sheet_url.split('/d/')[1].split('/')[0]
         spreadsheet = gc.open_by_key(sheet_id)
@@ -51,30 +45,23 @@ async def import_from_sheets(sheet_url: str, api_key: str, range_name: str) -> l
             if not records:
                 return []
             headers = [str(h).lower().strip() for h in records[0]]
-            data = records[1:]
-            df = pd.DataFrame(data, columns=headers)
+            rows = [dict(zip(headers, r)) for r in records[1:]]
         else:
-            records = worksheet.get_all_records()
-            df = pd.DataFrame(records)
-            df.columns = [str(c).lower().strip() for c in df.columns]
-            
+            rows = worksheet.get_all_records()
+            rows = [{k.lower().strip(): v for k, v in r.items()} for r in rows]
+
         contacts = []
-        for _, row in df.iterrows():
-            row_dict = row.to_dict()
-            email = str(row_dict.get('email', '')).strip()
-            if not email or email.lower() == 'nan' or not email:
+        for row in rows:
+            email = _clean(row.get("email", ""))
+            if not email or "@" not in email:
                 continue
-                
-            name = str(row_dict.get('name', '')).strip()
-            if name.lower() == 'nan': name = None
-            
-            org = str(row_dict.get('org', '')).strip()
-            if org.lower() == 'nan': org = None
-            
-            custom_fields = {k: v for k, v in row_dict.items() if k not in ['email', 'name', 'org'] and str(v).lower() != 'nan'}
-            
+            name = _clean(row.get("name", ""))
+            org  = _clean(row.get("org", ""))
+            custom_fields = {
+                k: v for k, v in row.items()
+                if k not in ("email", "name", "org") and _clean(v)
+            }
             validation = await validate_email(email)
-            
             contacts.append({
                 "email": email,
                 "name": name,
@@ -82,7 +69,6 @@ async def import_from_sheets(sheet_url: str, api_key: str, range_name: str) -> l
                 "custom_fields": custom_fields,
                 "email_status": validation["status"]
             })
-            
         return contacts
     except Exception as e:
         raise ValueError(f"Failed to import from Google Sheets: {str(e)}")
