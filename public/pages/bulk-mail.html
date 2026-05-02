@@ -152,9 +152,11 @@
                         <strong>Desktop Preview</strong>
                         <div class="badge badge-neutral">Recipient: {first_name}</div>
                     </div>
-                    <div id="emailPreviewFrame" style="padding:32px; min-height:500px; background:#fff; overflow-y:auto;">
-                        <h2 id="previewSubject" style="margin-top:0; border-bottom:1px solid var(--border); padding-bottom:12px; font-size:18px;"></h2>
-                        <div id="previewBody" style="margin-top:24px;"></div>
+                    <div id="emailPreviewFrame" style="min-height:500px; background:#f0f0f0; padding:0;">
+                        <div style="background:#fff; padding:12px 32px 8px; border-bottom:1px solid #eee;">
+                            <strong id="previewSubject" style="font-size:18px; color:#111;"></strong>
+                        </div>
+                        <iframe id="previewIframe" style="width:100%; border:none; min-height:480px; display:block;"></iframe>
                     </div>
                 </div>
             </div>
@@ -424,10 +426,21 @@
 
         function updatePreview() {
             document.getElementById('previewSubject').textContent = subjectInput.value || "No Subject";
-            let body = htmlBody.innerHTML || "No content yet.";
-            body = body.replace(/{first_name}/g, '<span style="background:var(--primary-light); padding:2px 4px; border-radius:4px; font-weight:600">John</span>');
-            body = body.replace(/{company}/g, '<span style="background:var(--primary-light); padding:2px 4px; border-radius:4px; font-weight:600">Acme Corp</span>');
-            document.getElementById('previewBody').innerHTML = body;
+            let html = htmlBody.innerHTML || "<p>No content yet.</p>";
+            html = html.replace(/\{first_name\}/g, 'John');
+            html = html.replace(/\{company\}/g, 'Acme Corp');
+            html = html.replace(/\{company_name\}/g, 'Acme Corp');
+
+            const iframe = document.getElementById('previewIframe');
+            const isFullDoc = /^\s*(<(!DOCTYPE|html))/i.test(html.trim());
+            if (isFullDoc) {
+                iframe.srcdoc = html;
+            } else {
+                iframe.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:24px 32px;line-height:1.6;color:#333;margin:0}</style></head><body>${html}</body></html>`;
+            }
+            iframe.onload = () => {
+                try { iframe.style.height = Math.max(480, iframe.contentDocument.body.scrollHeight + 32) + 'px'; } catch(e) {}
+            };
         }
 
         // --- AI LOGIC ---
@@ -739,8 +752,11 @@
                     if(!tSel.value) return;
                     const t = await api.get(`/template/${tSel.value}`);
                     subjectInput.value = t.subject;
-                    htmlBody.innerHTML = t.html_body;
+                    // If full HTML doc, extract body content for the WYSIWYG editor
+                    const bodyMatch = t.html_body && t.html_body.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                    htmlBody.innerHTML = bodyMatch ? bodyMatch[1] : (t.html_body || '');
                     subjectInput.dispatchEvent(new Event('input'));
+                    updatePreview();
                 });
 
                 // Load History
