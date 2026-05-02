@@ -13,6 +13,7 @@
         .template-card { cursor: pointer; transition: transform 0.2s; position: relative; display: flex; flex-direction: column; height: 100%; }
         .template-card:hover { transform: translateY(-4px); border-color: var(--primary); }
         .template-preview-box { height: 150px; background: #f9f9f9; border-radius: var(--radius-md); margin-bottom: 16px; overflow: hidden; padding: 12px; font-size: 10px; color: var(--text-muted); line-height: 1.4; border: 1px solid var(--border); }
+        .badge-global { background: rgba(37,99,235,0.12); color: #2563EB; border: 1px solid rgba(37,99,235,0.25); border-radius: 4px; font-size: 10px; font-weight: 700; padding: 2px 6px; letter-spacing: 0.4px; }
     </style>
 </head>
 <body>
@@ -37,6 +38,7 @@
                 <h1 class="page-title">Email Templates</h1>
                 <div class="page-header-actions">
                     <button id="cleanupBtn" class="btn btn-ghost btn-sm" onclick="cleanupAutoTemplates()" style="color:var(--danger)">🗑 Clean Auto-Saved</button>
+                    <button id="publishAllBtn" class="btn btn-secondary btn-sm" onclick="publishAll()" style="display:none;">🌐 Publish All as Global</button>
                     <a href="/pages/template-preview.html" class="btn btn-primary">+ Create Template</a>
                 </div>
             </header>
@@ -55,36 +57,76 @@
     <script>
         requireAuth();
 
+        const _payload = api.getTokenPayload();
+        const isAdmin = _payload && _payload.role === 'admin';
+
+        if (isAdmin) {
+            document.getElementById('publishAllBtn').style.display = 'inline-flex';
+        }
+
         async function loadTemplates() {
             try {
                 const templates = await api.get('/template');
                 const grid = document.getElementById('templateGrid');
                 grid.innerHTML = '';
-                
+
                 if(templates.length === 0) {
                     grid.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-secondary); grid-column: 1 / -1;">No templates found. Start by creating one!</div>';
                     return;
                 }
-                
+
                 templates.forEach(t => {
+                    const tid = t.id || t._id;
+                    const globalBadge = t.is_global ? '<span class="badge-global">🌐 Global</span>' : '';
+                    const adminGlobalBtn = isAdmin ? `
+                        <button class="btn btn-sm btn-ghost" style="color:${t.is_global ? 'var(--danger)' : 'var(--primary)'}"
+                            onclick="toggleGlobal(event, '${tid}', ${!!t.is_global})">
+                            ${t.is_global ? 'Make Private' : '🌐 Share'}
+                        </button>` : '';
+
                     const card = document.createElement('div');
                     card.className = 'card template-card';
                     card.innerHTML = `
                         <div class="template-preview-box">
                             <strong>${t.subject}</strong><br><br>
-                            ${t.preview_text}...
+                            ${t.preview_text || ''}...
                         </div>
-                        <h3 style="font-size:16px; margin-bottom:4px;">${t.name}</h3>
+                        <h3 style="font-size:16px; margin-bottom:4px;">${t.name} ${globalBadge}</h3>
                         <p style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; flex:1;">Last modified: ${new Date().toLocaleDateString()}</p>
-                        <div style="display:flex; gap:8px;">
-                            <a href="/pages/template-preview.html?id=${t.id}" class="btn btn-sm btn-secondary" style="flex:1">Edit</a>
-                            <button class="btn btn-sm btn-danger" onclick="deleteTemplate(event, '${t.id}')">✕</button>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <a href="/pages/template-preview.html?id=${tid}" class="btn btn-sm btn-secondary" style="flex:1" onclick="event.stopPropagation()">Edit</a>
+                            ${adminGlobalBtn}
+                            <button class="btn btn-sm btn-danger" onclick="deleteTemplate(event, '${tid}')">✕</button>
                         </div>
                     `;
-                    card.onclick = () => window.location.href = `/pages/template-preview.html?id=${t.id}`;
+                    card.onclick = () => window.location.href = `/pages/template-preview.html?id=${tid}`;
                     grid.appendChild(card);
                 });
             } catch (err) { console.error(err); }
+        }
+
+        async function toggleGlobal(e, id, currentlyGlobal) {
+            e.stopPropagation();
+            const endpoint = currentlyGlobal
+                ? `/admin/templates/${id}/make-private`
+                : `/admin/templates/${id}/make-global`;
+            try {
+                const res = await api.post(endpoint, {});
+                showToast(res.message);
+                loadTemplates();
+            } catch(err) { showToast(err.message || 'Failed', 'danger'); }
+        }
+
+        async function publishAll() {
+            if(!confirm("Publish ALL your templates as global? All users will see them.")) return;
+            const btn = document.getElementById('publishAllBtn');
+            btn.disabled = true;
+            try {
+                const res = await api.post('/admin/templates/publish-all', {});
+                showToast(res.message);
+                loadTemplates();
+            } catch(err) { showToast(err.message || 'Failed', 'danger'); }
+            finally { btn.disabled = false; }
         }
 
         async function deleteTemplate(e, id) {

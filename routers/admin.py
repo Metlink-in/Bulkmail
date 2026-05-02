@@ -467,6 +467,41 @@ async def delete_global_templates(current_admin: Dict[str, Any] = Depends(requir
     return {"message": f"Deleted {res.deleted_count} global templates.", "count": res.deleted_count}
 
 
+@router.post("/templates/{template_id}/make-global")
+async def make_template_global(template_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    """Mark any template as global so all users can see and use it."""
+    res = await db.mail_templates.find_one_and_update(
+        {"_id": template_id},
+        {"$set": {"is_global": True, "updated_at": get_current_timestamp()}}
+    )
+    if not res:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"message": "Template is now visible to all users"}
+
+
+@router.post("/templates/{template_id}/make-private")
+async def make_template_private(template_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    """Remove global flag — template becomes private to its owner again."""
+    res = await db.mail_templates.find_one_and_update(
+        {"_id": template_id},
+        {"$unset": {"is_global": ""}, "$set": {"updated_at": get_current_timestamp()}}
+    )
+    if not res:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"message": "Template is now private"}
+
+
+@router.post("/templates/publish-all")
+async def publish_all_admin_templates(current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    """Mark ALL templates owned by the admin as global (visible to every user)."""
+    admin_id = str(current_admin["_id"])
+    res = await db.mail_templates.update_many(
+        {"user_id": admin_id},
+        {"$set": {"is_global": True, "updated_at": get_current_timestamp()}}
+    )
+    return {"message": f"Published {res.modified_count} template(s) as global", "count": res.modified_count}
+
+
 @router.post("/jobs/{job_id}/force-cancel")
 async def admin_force_cancel_job(job_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
     res = await db.mail_jobs.find_one_and_update(
