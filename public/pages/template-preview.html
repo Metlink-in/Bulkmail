@@ -145,29 +145,23 @@
 
         function updatePreview() {
             const iframe = document.getElementById('previewIframe');
-            let html = document.getElementById('tBody').value || "No content.";
+            let html = document.getElementById('tBody').value || '';
 
-            // Replace preview variables
-            const vars = {
-                '{first_name}': document.getElementById('var_first_name').value || 'John',
-                '{org}': document.getElementById('var_company').value || 'Acme Corp',
-                '{company}': document.getElementById('var_company').value || 'Acme Corp',
-                '{company_name}': document.getElementById('var_company').value || 'Acme Corp',
-                '{name}': document.getElementById('var_first_name').value || 'John'
-            };
-            for (const k in vars) html = html.replace(new RegExp(k.replace(/[{}]/g, '\\$&'), 'g'), vars[k]);
+            const firstName = document.getElementById('var_first_name').value || 'John';
+            const company = document.getElementById('var_company').value || 'Acme Corp';
+            ['{first_name}','{name}'].forEach(k => html = html.split(k).join(firstName));
+            ['{org}','{company}','{company_name}','{{company_name}}','{{industry}}'].forEach(k => html = html.split(k).join(company));
 
-            // If it's already a full HTML document, use it directly — don't wrap it
-            const isFullDoc = /^\s*(<(!DOCTYPE|html))/i.test(html.trim());
+            const isFullDoc = html.toLowerCase().includes('<html');
             if (isFullDoc) {
+                // Full document — use srcdoc directly, all CSS applies as-is
                 iframe.srcdoc = html;
             } else {
-                iframe.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:20px;line-height:1.6;color:#333;margin:0}</style></head><body>${html}</body></html>`;
+                iframe.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:20px;line-height:1.6;color:#333;margin:0}</style></head><body>${html || 'No content.'}</body></html>`;
             }
 
-            // Auto-size iframe height
             iframe.onload = () => {
-                try { iframe.style.height = iframe.contentDocument.body.scrollHeight + 'px'; } catch(e) {}
+                try { iframe.style.height = Math.max(400, iframe.contentDocument.body.scrollHeight + 20) + 'px'; } catch(e) {}
             };
         }
 

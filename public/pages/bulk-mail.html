@@ -367,22 +367,22 @@
         // Full template HTML stored separately so the preview can use it intact
         let _fullTemplateHtml = null;
 
-        function _extractBodyContent(html) {
-            const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-            return m ? m[1] : html;
-        }
-        function _extractBodyAttrs(html) {
-            const m = html.match(/<body([^>]*)>/i);
-            return m ? m[1] : '';
-        }
-        function _extractHeadStyles(html) {
-            const head = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-            if (!head) return '';
-            const styles = head[1].match(/<style[^>]*>[\s\S]*?<\/style>/gi);
-            return styles ? styles.join('\n') : '';
-        }
-        function _isFullDoc(html) {
-            return /^\s*(<(!DOCTYPE|html))/i.test((html || '').trim());
+        function _parseTemplate(html) {
+            // Use the browser's own HTML parser — handles all edge cases reliably
+            try {
+                const doc = new DOMParser().parseFromString(html || '', 'text/html');
+                const bodyContent = doc.body ? doc.body.innerHTML : html;
+                const bodyAttrs = doc.body
+                    ? Array.from(doc.body.attributes).map(a => `${a.name}="${a.value}"`).join(' ')
+                    : '';
+                const headStyles = doc.head
+                    ? Array.from(doc.head.querySelectorAll('style')).map(s => s.outerHTML).join('\n')
+                    : '';
+                const isFullDoc = (html || '').toLowerCase().includes('<html');
+                return { bodyContent, bodyAttrs, headStyles, isFullDoc };
+            } catch(e) {
+                return { bodyContent: html, bodyAttrs: '', headStyles: '', isFullDoc: false };
+            }
         }
 
         // --- UI UTILS ---
@@ -459,8 +459,7 @@
             if (_fullTemplateHtml) {
                 // Reconstruct full HTML: original head/body styles + current editor body content
                 const bodyContent = applyVars(htmlBody.innerHTML || '');
-                const bodyAttrs = _extractBodyAttrs(_fullTemplateHtml);
-                const headStyles = _extractHeadStyles(_fullTemplateHtml);
+                const { bodyAttrs, headStyles } = _parseTemplate(_fullTemplateHtml);
                 srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">${headStyles}</head><body ${bodyAttrs}>${bodyContent}</body></html>`;
             } else {
                 // No template loaded — just wrap editor content in a basic shell
@@ -609,8 +608,7 @@
             if(!name) return showToast("Enter a template name", "warning");
             try {
                 // If a full-doc template was loaded, save the reconstructed full HTML
-                const bodyAttrs = _fullTemplateHtml ? _extractBodyAttrs(_fullTemplateHtml) : '';
-                const headStyles = _fullTemplateHtml ? _extractHeadStyles(_fullTemplateHtml) : '';
+                const { bodyAttrs, headStyles } = _fullTemplateHtml ? _parseTemplate(_fullTemplateHtml) : { bodyAttrs: '', headStyles: '' };
                 const saveHtml = _fullTemplateHtml
                     ? `<!DOCTYPE html><html><head><meta charset="UTF-8">${headStyles}</head><body ${bodyAttrs}>${htmlBody.innerHTML}</body></html>`
                     : htmlBody.innerHTML;
@@ -789,9 +787,10 @@
                     if(!tSel.value) return;
                     const t = await api.get(`/template/${tSel.value}`);
                     subjectInput.value = t.subject;
-                    if (_isFullDoc(t.html_body)) {
+                    const parsed = _parseTemplate(t.html_body);
+                    if (parsed.isFullDoc) {
                         _fullTemplateHtml = t.html_body;
-                        htmlBody.innerHTML = _extractBodyContent(t.html_body);
+                        htmlBody.innerHTML = parsed.bodyContent;
                     } else {
                         _fullTemplateHtml = null;
                         htmlBody.innerHTML = t.html_body || '';
