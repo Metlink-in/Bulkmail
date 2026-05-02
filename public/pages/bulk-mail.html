@@ -694,10 +694,16 @@
                     sel.innerHTML += `<option value="${l.id || l._id}">${l.name} (${count})</option>`; 
                 });
                 
-                // Load Templates
+                // Clean up auto-saved "Campaign [timestamp]" junk silently
+                api.delete('/template/bulk/cleanup-auto').catch(() => {});
+
+                // Load Templates — skip auto-saved "Campaign [date]" entries
                 const templates = await api.get('/template');
                 const tSel = document.getElementById('templateSelect');
-                templates.forEach(t => { tSel.innerHTML += `<option value="${t.id}">${t.name}</option>`; });
+                const autoPattern = /^Campaign \d+\/\d+\/\d+/i;
+                templates
+                    .filter(t => !autoPattern.test(t.name))
+                    .forEach(t => { tSel.innerHTML += `<option value="${t.id}">${t.name}</option>`; });
                 
                 tSel.addEventListener('change', async () => {
                     if(!tSel.value) return;

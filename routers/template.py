@@ -30,7 +30,7 @@ async def get_templates(page: int = 1, limit: int = 50, current_user: Dict[str, 
     
     # Fetch both user templates and global templates
     query = {"$or": [{"user_id": user_id}, {"is_global": True}]}
-    cursor = db.mail_templates.find(query).sort("is_global", -1).sort("updated_at", -1).skip(skip).limit(limit)
+    cursor = db.mail_templates.find(query).sort([("is_global", -1), ("updated_at", -1)]).skip(skip).limit(limit)
     templates = await cursor.to_list(length=limit)
     
     res = []
