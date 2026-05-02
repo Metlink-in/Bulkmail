@@ -631,10 +631,15 @@
             document.getElementById('liveProgress').style.display = 'block';
             document.getElementById('jobControls').style.display = 'flex';
             if(jobPollInterval) clearInterval(jobPollInterval);
-            
+
+            let consecutiveErrors = 0;
+            const MAX_ERRORS = 3;
+
             jobPollInterval = setInterval(async () => {
                 try {
                     const status = await api.get(`/mail/jobs/${jobId}/status`);
+                    consecutiveErrors = 0;
+
                     document.getElementById('jobProgressBar').style.width = status.progress_pct + '%';
                     document.getElementById('jobProgressText').textContent = Math.round(status.progress_pct) + '%';
                     document.getElementById('jobStats').textContent = `${status.sent_count} sent / ${status.total_count} total`;
@@ -646,14 +651,26 @@
 
                     if(status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
                         clearInterval(jobPollInterval);
+                        jobPollInterval = null;
                         document.getElementById('liveBadge').style.animation = 'none';
                         document.getElementById('liveBadge').textContent = 'FINISHED';
                         document.getElementById('liveBadge').className = 'badge badge-neutral';
                         document.getElementById('currentRecipient').textContent = '';
                     }
-                } catch (err) { clearInterval(jobPollInterval); }
+                } catch (err) {
+                    consecutiveErrors++;
+                    if(consecutiveErrors >= MAX_ERRORS) {
+                        clearInterval(jobPollInterval);
+                        jobPollInterval = null;
+                        document.getElementById('jobStatusLabel').textContent = 'Status check failed — refresh to reconnect';
+                    }
+                }
             }, 8000);
         }
+
+        window.addEventListener('beforeunload', () => {
+            if(jobPollInterval) clearInterval(jobPollInterval);
+        });
 
         // --- JOB CONTROLS ---
         document.getElementById('pauseJobBtn').addEventListener('click', async () => {
