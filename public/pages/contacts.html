@@ -261,6 +261,7 @@
                 const listsArr = Array.isArray(lists) ? lists : (lists.items || []);
                 listsArr.forEach(l => {
                     totalC += l.total_contacts;
+                    const lid = l.id || l._id;
                     const card = document.createElement('div');
                     card.className = 'card list-card';
                     card.onclick = () => openDrawer(l);
@@ -268,8 +269,8 @@
                         <div class="list-card-header">
                             <strong style="font-size:16px;">${l.name}</strong>
                             <div style="display:flex; gap:8px;">
-                                <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation(); openEditListModal('${l._id}', '${l.name}')">✏️</button>
-                                <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation(); deleteList('${l._id}')">🗑️</button>
+                                <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation(); openEditListModal('${lid}', '${l.name}')">✏️</button>
+                                <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation(); deleteList('${lid}')">🗑️</button>
                             </div>
                         </div>
                         <div class="list-card-stats">
