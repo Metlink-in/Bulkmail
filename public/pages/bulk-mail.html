@@ -360,10 +360,30 @@
     <script src="/js/sidebar.js"></script>
     <script>
         requireAuth();
-        
+
         let activeJobId = null;
         let jobPollInterval = null;
         let loadedContacts = [];
+        // Full template HTML stored separately so the preview can use it intact
+        let _fullTemplateHtml = null;
+
+        function _extractBodyContent(html) {
+            const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+            return m ? m[1] : html;
+        }
+        function _extractBodyAttrs(html) {
+            const m = html.match(/<body([^>]*)>/i);
+            return m ? m[1] : '';
+        }
+        function _extractHeadStyles(html) {
+            const head = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+            if (!head) return '';
+            const styles = head[1].match(/<style[^>]*>[\s\S]*?<\/style>/gi);
+            return styles ? styles.join('\n') : '';
+        }
+        function _isFullDoc(html) {
+            return /^\s*(<(!DOCTYPE|html))/i.test((html || '').trim());
+        }
 
         // --- UI UTILS ---
         function showToast(msg, type="success") {
@@ -426,18 +446,29 @@
 
         function updatePreview() {
             document.getElementById('previewSubject').textContent = subjectInput.value || "No Subject";
-            let html = htmlBody.innerHTML || "<p>No content yet.</p>";
-            html = html.replace(/\{first_name\}/g, 'John');
-            html = html.replace(/\{company\}/g, 'Acme Corp');
-            html = html.replace(/\{company_name\}/g, 'Acme Corp');
+
+            const vars = { '{first_name}': 'John', '{name}': 'John', '{company}': 'Acme Corp', '{company_name}': 'Acme Corp', '{{industry}}': 'Tech', '{{your_name}}': 'Your Name' };
+            function applyVars(s) {
+                for (const k in vars) s = s.replace(new RegExp(k.replace(/[{}]/g, '\\$&'), 'g'), vars[k]);
+                return s;
+            }
 
             const iframe = document.getElementById('previewIframe');
-            const isFullDoc = /^\s*(<(!DOCTYPE|html))/i.test(html.trim());
-            if (isFullDoc) {
-                iframe.srcdoc = html;
+            let srcdoc;
+
+            if (_fullTemplateHtml) {
+                // Reconstruct full HTML: original head/body styles + current editor body content
+                const bodyContent = applyVars(htmlBody.innerHTML || '');
+                const bodyAttrs = _extractBodyAttrs(_fullTemplateHtml);
+                const headStyles = _extractHeadStyles(_fullTemplateHtml);
+                srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">${headStyles}</head><body ${bodyAttrs}>${bodyContent}</body></html>`;
             } else {
-                iframe.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:24px 32px;line-height:1.6;color:#333;margin:0}</style></head><body>${html}</body></html>`;
+                // No template loaded — just wrap editor content in a basic shell
+                const bodyContent = applyVars(htmlBody.innerHTML || '<p>No content yet.</p>');
+                srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:24px 32px;line-height:1.6;color:#333;margin:0}</style></head><body>${bodyContent}</body></html>`;
             }
+
+            iframe.srcdoc = srcdoc;
             iframe.onload = () => {
                 try { iframe.style.height = Math.max(480, iframe.contentDocument.body.scrollHeight + 32) + 'px'; } catch(e) {}
             };
@@ -577,10 +608,16 @@
             const name = document.getElementById('newTemplateName').value.trim();
             if(!name) return showToast("Enter a template name", "warning");
             try {
+                // If a full-doc template was loaded, save the reconstructed full HTML
+                const bodyAttrs = _fullTemplateHtml ? _extractBodyAttrs(_fullTemplateHtml) : '';
+                const headStyles = _fullTemplateHtml ? _extractHeadStyles(_fullTemplateHtml) : '';
+                const saveHtml = _fullTemplateHtml
+                    ? `<!DOCTYPE html><html><head><meta charset="UTF-8">${headStyles}</head><body ${bodyAttrs}>${htmlBody.innerHTML}</body></html>`
+                    : htmlBody.innerHTML;
                 const tRes = await api.post('/template', {
                     name,
                     subject: subjectInput.value,
-                    html_body: htmlBody.innerHTML
+                    html_body: saveHtml
                 });
                 const tSel = document.getElementById('templateSelect');
                 const opt = document.createElement('option');
@@ -752,9 +789,13 @@
                     if(!tSel.value) return;
                     const t = await api.get(`/template/${tSel.value}`);
                     subjectInput.value = t.subject;
-                    // If full HTML doc, extract body content for the WYSIWYG editor
-                    const bodyMatch = t.html_body && t.html_body.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                    htmlBody.innerHTML = bodyMatch ? bodyMatch[1] : (t.html_body || '');
+                    if (_isFullDoc(t.html_body)) {
+                        _fullTemplateHtml = t.html_body;
+                        htmlBody.innerHTML = _extractBodyContent(t.html_body);
+                    } else {
+                        _fullTemplateHtml = null;
+                        htmlBody.innerHTML = t.html_body || '';
+                    }
                     subjectInput.dispatchEvent(new Event('input'));
                     updatePreview();
                 });
