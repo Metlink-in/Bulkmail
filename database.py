@@ -1,4 +1,5 @@
-﻿import certifi
+﻿import os
+import certifi
 import bcrypt as _bcrypt
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from config import settings
@@ -10,13 +11,20 @@ DATABASE_NAME = settings.MONGODB_DB_NAME
 async def connect_db():
     global client
     if client is None:
+        # Serverless (Vercel): single connection, short timeouts so cold starts fail fast
+        is_vercel = bool(os.environ.get("VERCEL"))
+        timeout_ms = 4000 if is_vercel else 8000
+        pool_size = 1 if is_vercel else 10
         try:
             client = AsyncIOMotorClient(
                 settings.MONGODB_URI,
                 tlsCAFile=certifi.where(),
-                serverSelectionTimeoutMS=8000,
-                connectTimeoutMS=8000,
-                socketTimeoutMS=8000,
+                serverSelectionTimeoutMS=timeout_ms,
+                connectTimeoutMS=timeout_ms,
+                socketTimeoutMS=timeout_ms,
+                maxPoolSize=pool_size,
+                minPoolSize=0,
+                maxIdleTimeMS=15000,
             )
             await client.admin.command('ping')
             print("MongoDB connected successfully.")
@@ -25,8 +33,11 @@ async def connect_db():
             try:
                 client = AsyncIOMotorClient(
                     settings.MONGODB_URI,
-                    serverSelectionTimeoutMS=8000,
-                    connectTimeoutMS=8000,
+                    serverSelectionTimeoutMS=timeout_ms,
+                    connectTimeoutMS=timeout_ms,
+                    maxPoolSize=pool_size,
+                    minPoolSize=0,
+                    maxIdleTimeMS=15000,
                 )
                 await client.admin.command('ping')
                 print("MongoDB connected (fallback).")

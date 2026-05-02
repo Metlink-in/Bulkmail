@@ -188,8 +188,26 @@
         }
 
         function exportHistory() {
-            window.print(); // Placeholder for actual CSV export logic
-            alert("Exporting current view to CSV...");
+            const rows = [['Campaign', 'Date', 'Total', 'Sent', 'Failed', 'Status']];
+            document.querySelectorAll('#jobsBody tr:not([id^="detail-"])').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                if (cells.length >= 6) {
+                    rows.push([
+                        cells[0].textContent.trim(),
+                        cells[1].textContent.trim(),
+                        cells[2].textContent.trim(),
+                        cells[3].textContent.trim(),
+                        cells[4].textContent.trim(),
+                        cells[5].textContent.trim()
+                    ]);
+                }
+            });
+            if (rows.length <= 1) return showToast('No data to export', 'warning');
+            const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            a.download = `campaigns-${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
         }
 
         loadJobs();

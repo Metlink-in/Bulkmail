@@ -56,7 +56,15 @@ async def lifespan(app: FastAPI):
         except:
             pass
 
-app = FastAPI(title="BulkReach Pro API", lifespan=lifespan)
+_is_prod = os.environ.get("APP_ENV", "production") == "production"
+app = FastAPI(
+    title="BulkReach Pro API",
+    lifespan=lifespan,
+    # Disable interactive docs in production — reduces cold-start memory and parse time
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
+)
 app.state.limiter = limiter
 
 # Exception Handlers
@@ -108,11 +116,6 @@ app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
 app.include_router(schedule_router, prefix="/api/schedule", tags=["schedule"])
 app.include_router(replies_router, prefix="/api/replies", tags=["replies"])
 
-# Serve frontend static files (local dev). On Vercel, CDN handles this.
-_public = pathlib.Path(__file__).parent / "public"
-if _public.exists():
-    app.mount("/", StaticFiles(directory=str(_public), html=True), name="static")
-
 @app.get("/health", tags=["system"])
 async def health_check():
     db_connected = False
@@ -130,3 +133,9 @@ async def health_check():
         "db_connected": db_connected,
         "db_error": db_error,
     }
+
+# Serve frontend static files (local dev). On Vercel, CDN handles this.
+# Mount AFTER all routes — StaticFiles at "/" captures everything below it.
+_public = pathlib.Path(__file__).parent / "public"
+if _public.exists():
+    app.mount("/", StaticFiles(directory=str(_public), html=True), name="static")

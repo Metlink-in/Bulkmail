@@ -60,14 +60,7 @@
         
         async function loadLogs() {
             try {
-                let logs = [];
-                try {
-                    logs = await api.get('/admin/logs'); 
-                } catch(e) {
-                    logs = [
-                        { timestamp: new Date().toISOString(), user_id: "system", action: "admin_view", resource: "logs", ip_address: "127.0.0.1" }
-                    ];
-                }
+                const logs = await api.get('/admin/logs');
 
                 const tBody = document.getElementById('logsBody');
                 tBody.innerHTML = '';
@@ -86,9 +79,12 @@
                         <td style="color:var(--text-muted)">${l.ip_address || '-'}</td>
                     </tr>`;
                 });
-            } catch (err) { console.error(err); }
+            } catch (err) {
+                document.getElementById('logsBody').innerHTML =
+                    `<tr><td colspan="5" style="text-align:center;color:var(--danger)">Failed to load logs: ${err.message}</td></tr>`;
+            }
         }
-        
+
         loadLogs();
         setInterval(loadLogs, 30000);
     </script>

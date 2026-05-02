@@ -370,12 +370,14 @@ async def get_live_monitoring(current_admin: Dict[str, Any] = Depends(require_ad
             
         running_jobs.append({
             "job_id": str(j["_id"]),
+            "user_id": j.get("user_id", ""),
             "user_name": u.get("name") if u else "Unknown",
             "user_email": u.get("email") if u else "Unknown",
             "template_name": t.get("name") if t else "Unknown",
-            "sent": sent + failed,
+            "status": j.get("status", "running"),
+            "sent": sent,
+            "failed": failed,
             "total": total,
-            "current_recipient": None,
             "started_at": j.get("updated_at")
         })
         
@@ -391,10 +393,10 @@ async def get_live_monitoring(current_admin: Dict[str, Any] = Depends(require_ad
         "timestamp": now.isoformat(),
         "running_jobs": running_jobs,
         "queued_jobs_count": queued_count,
-        "emails_sent_last_minute": sent_1m,
-        "emails_sent_last_hour": sent_1h,
+        "emails_last_minute": sent_1m,
+        "emails_last_hour": sent_1h,
         "errors_last_hour": err_1h,
-        "active_users_online": active_users
+        "active_users_last_5m": active_users
     })
 
 @router.post("/users/{user_id}/reset-password")
@@ -463,6 +465,26 @@ async def seed_global_templates(current_admin: Dict[str, Any] = Depends(require_
 async def delete_global_templates(current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
     res = await db.mail_templates.delete_many({"is_global": True})
     return {"message": f"Deleted {res.deleted_count} global templates.", "count": res.deleted_count}
+
+
+@router.post("/jobs/{job_id}/force-cancel")
+async def admin_force_cancel_job(job_id: str, current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    res = await db.mail_jobs.find_one_and_update(
+        {"_id": job_id, "status": {"$in": ["running", "queued", "paused"]}},
+        {"$set": {"status": "cancelled", "updated_at": get_current_timestamp()}}
+    )
+    if not res:
+        raise HTTPException(status_code=404, detail="Job not found or already completed/cancelled")
+    return {"message": f"Job {job_id[:8]} force-cancelled"}
+
+
+@router.post("/emergency-pause")
+async def emergency_pause_all(current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    res = await db.mail_jobs.update_many(
+        {"status": "running"},
+        {"$set": {"status": "paused", "updated_at": get_current_timestamp()}}
+    )
+    return {"message": f"Paused {res.modified_count} running job(s)", "paused": res.modified_count}
 
 
 @router.get("/users/{user_id}/impersonate")

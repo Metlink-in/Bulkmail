@@ -38,10 +38,9 @@
                         <thead>
                             <tr>
                                 <th>Job ID</th>
-                                <th>User ID</th>
+                                <th>User</th>
                                 <th>Status</th>
-                                <th>Sent</th>
-                                <th>Failed</th>
+                                <th>Created</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -54,36 +53,69 @@
         </main>
     </div>
 
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="/js/api.js"></script>
     <script>
         requireAdmin();
-        
+
+        function showToast(msg, type = 'success') {
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = msg;
+            document.getElementById('toastContainer').appendChild(t);
+            setTimeout(() => t.remove(), 3500);
+        }
+
         async function loadJobs() {
             try {
-                const live = await api.get('/admin/live');
+                const jobs = await api.get('/admin/mail-jobs?limit=50');
                 const tBody = document.getElementById('jobsBody');
                 tBody.innerHTML = '';
-                
-                if(!live.running_jobs || live.running_jobs.length === 0) {
-                    tBody.innerHTML = '<tr><td colspan="6" style="text-align:center">No active jobs.</td></tr>';
+
+                if (!jobs || jobs.length === 0) {
+                    tBody.innerHTML = '<tr><td colspan="6" style="text-align:center">No jobs found.</td></tr>';
                     return;
                 }
-                
-                live.running_jobs.forEach(j => {
+
+                jobs.forEach(j => {
+                    let badgeClass = 'badge-neutral';
+                    if (j.status === 'running')   badgeClass = 'badge-info';
+                    if (j.status === 'completed') badgeClass = 'badge-success';
+                    if (j.status === 'failed')    badgeClass = 'badge-danger';
+                    if (j.status === 'cancelled') badgeClass = 'badge-danger';
+
+                    const canCancel = ['running','queued','paused'].includes(j.status);
                     tBody.innerHTML += `<tr>
-                        <td style="font-family:monospace">${j.job_id.substring(0,8)}</td>
-                        <td style="font-family:monospace">${j.user_id.substring(0,8)}</td>
-                        <td><span class="badge badge-info">${j.status}</span></td>
-                        <td>${j.sent}</td>
-                        <td style="color:var(--danger)">${j.failed}</td>
+                        <td style="font-family:monospace">${j.id ? j.id.substring(0,8) : '--'}</td>
+                        <td>${j.user_email || j.user_name || j.user_id || '--'}</td>
+                        <td><span class="badge ${badgeClass}">${j.status}</span></td>
+                        <td>${new Date(j.created_at).toLocaleDateString()}</td>
                         <td>
-                            <button onclick="alert('Admin cancel override triggered')" class="btn btn-sm btn-danger">Force Cancel</button>
+                            ${canCancel
+                                ? `<button onclick="forceCancel('${j.id}')" class="btn btn-sm btn-danger">Force Cancel</button>`
+                                : '<span style="color:var(--text-muted);font-size:12px">—</span>'
+                            }
                         </td>
                     </tr>`;
                 });
-            } catch (err) { console.error(err); }
+            } catch (err) {
+                document.getElementById('jobsBody').innerHTML =
+                    `<tr><td colspan="5" style="text-align:center;color:var(--danger)">${err.message}</td></tr>`;
+            }
         }
-        
+
+        async function forceCancel(jobId) {
+            if (!confirm('Force-cancel this job?')) return;
+            try {
+                const res = await api.post(`/admin/jobs/${jobId}/force-cancel`, {});
+                showToast(res.message);
+                loadJobs();
+            } catch (err) {
+                showToast(err.message, 'danger');
+            }
+        }
+
         loadJobs();
     </script>
 </body>
