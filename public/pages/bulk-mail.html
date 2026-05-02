@@ -639,15 +639,20 @@
                     document.getElementById('jobProgressText').textContent = Math.round(status.progress_pct) + '%';
                     document.getElementById('jobStats').textContent = `${status.sent_count} sent / ${status.total_count} total`;
                     document.getElementById('jobStatusLabel').textContent = `Campaign Status: ${status.status.toUpperCase()}`;
-                    
+
+                    if(status.current_recipient) {
+                        document.getElementById('currentRecipient').textContent = `Sending to: ${status.current_recipient}`;
+                    }
+
                     if(status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
                         clearInterval(jobPollInterval);
                         document.getElementById('liveBadge').style.animation = 'none';
                         document.getElementById('liveBadge').textContent = 'FINISHED';
                         document.getElementById('liveBadge').className = 'badge badge-neutral';
+                        document.getElementById('currentRecipient').textContent = '';
                     }
                 } catch (err) { clearInterval(jobPollInterval); }
-            }, 5000);
+            }, 8000);
         }
 
         // --- JOB CONTROLS ---

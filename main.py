@@ -6,13 +6,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 
 from config import settings
 from database import connect_db, close_db, get_db
-from services.scheduler_service import start_scheduler, stop_scheduler
 
 # Routers
 from routers.auth import router as auth_router
@@ -28,7 +24,10 @@ from routers.replies import router as replies_router
 
 logger = logging.getLogger(__name__)
 
-# Rate limiter setup
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
@@ -43,6 +42,7 @@ async def lifespan(app: FastAPI):
             await connect_db()
             db = await get_db()
             try:
+                from services.scheduler_service import start_scheduler
                 await start_scheduler(db)
             except Exception as se:
                 logger.error(f"Scheduler failed to start: {se}")
@@ -51,6 +51,7 @@ async def lifespan(app: FastAPI):
     yield
     if not is_vercel:
         try:
+            from services.scheduler_service import stop_scheduler
             await stop_scheduler()
             await close_db()
         except:
