@@ -322,7 +322,7 @@
                 </a>
             </p>
             <p class="input-hint" id="p_smtp_password_hint" style="display:none;">
-                ✅ Password is saved. Leave this blank to keep it, or type a new one to replace it.
+                ✅ Password is saved. Click the field to enter a new password, or leave the dots to keep the current one.
             </p>
         </div>
 
@@ -525,9 +525,15 @@ function openProfileModal(id = null) {
         document.getElementById('p_reply_to').value = p.reply_to_email || '';
         document.getElementById('p_smtp_host').value = p.smtp_host || '';
         document.getElementById('p_smtp_port').value = p.smtp_port || 465;
-        document.getElementById('p_smtp_password').value = '';
-        document.getElementById('p_smtp_password').placeholder = 'Type new password to change it';
+        document.getElementById('p_smtp_password').value = '••••••••';
+        document.getElementById('p_smtp_password').placeholder = '';
         document.getElementById('p_smtp_password_hint').style.display = 'block';
+        // Clear the dots when user clicks to type a new password
+        const pwField = document.getElementById('p_smtp_password');
+        pwField.addEventListener('focus', function clearDots() {
+            if (this.value === '••••••••') this.value = '';
+            this.removeEventListener('focus', clearDots);
+        }, { once: true });
         const sec = p.use_ssl ? 'ssl' : (p.use_tls ? 'tls' : 'none');
         document.getElementById('p_security').value = sec;
         document.getElementById('p_is_default').checked = !!p.is_default;
