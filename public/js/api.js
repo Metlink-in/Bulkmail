@@ -35,10 +35,11 @@ const api = {
         const payload = this.getTokenPayload();
         return payload ? payload.role : null;
     },
-    async refreshAccessToken() {
+    async refreshAccessToken({ redirectOnFail = true } = {}) {
         const { refresh } = this.getTokens();
         if (!refresh) {
             this.clearTokens();
+            if (redirectOnFail) window.location.href = '/login.html';
             return null;
         }
         try {
@@ -52,23 +53,25 @@ const api = {
             this.setTokens(data.access_token, null);
             return data.access_token;
         } catch (e) {
-            this.clearTokens();
-            window.location.href = '/login.html';
+            if (redirectOnFail) {
+                this.clearTokens();
+                window.location.href = '/login.html';
+            }
             return null;
         }
     },
     async request(method, path, body = null, options = {}) {
         let { access } = this.getTokens();
-        
+
         const headers = {
             'Content-Type': 'application/json',
             ...options.headers
         };
-        
+
         if (access) {
             headers['Authorization'] = `Bearer ${access}`;
         }
-        
+
         const config = { method, headers };
         if (body) {
             config.body = body instanceof FormData ? body : JSON.stringify(body);
@@ -76,31 +79,40 @@ const api = {
                 delete headers['Content-Type'];
             }
         }
-        
-        // Ensure path starts with /
+
         const safePath = path.startsWith('/') ? path : '/' + path;
         let res = await fetch(`${API_BASE}/api${safePath}`, config);
-        
+
         if (res.status === 401 && access) {
-            access = await this.refreshAccessToken();
-            if (access) {
-                headers['Authorization'] = `Bearer ${access}`;
+            // silent refresh — never redirect during background requests
+            const newToken = await this.refreshAccessToken({ redirectOnFail: false });
+            if (newToken) {
+                headers['Authorization'] = `Bearer ${newToken}`;
                 res = await fetch(`${API_BASE}/api${safePath}`, config);
+            } else {
+                // refresh failed: only redirect if this is a user-initiated request (not polling)
+                if (!options.silent) {
+                    this.clearTokens();
+                    window.location.href = '/login.html';
+                }
+                throw { status: 401, message: 'Session expired. Please log in again.' };
             }
         }
-        
+
         let data;
         try {
             data = await res.json();
         } catch(e) {
             data = null;
         }
-        
+
         if (!res.ok) {
             throw { status: res.status, message: data?.detail || res.statusText, detail: data };
         }
         return data;
     },
+    // silent variant — 401 errors don't redirect to login (safe for polling)
+    poll(path) { return this.request('GET', path, null, { silent: true }); },
     get(path) { return this.request('GET', path); },
     post(path, body) { return this.request('POST', path, body); },
     put(path, body) { return this.request('PUT', path, body); },

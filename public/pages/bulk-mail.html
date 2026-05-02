@@ -637,7 +637,7 @@
 
             jobPollInterval = setInterval(async () => {
                 try {
-                    const status = await api.get(`/mail/jobs/${jobId}/status`);
+                    const status = await api.poll(`/mail/jobs/${jobId}/status`);
                     consecutiveErrors = 0;
 
                     document.getElementById('jobProgressBar').style.width = status.progress_pct + '%';
