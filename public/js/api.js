@@ -111,8 +111,9 @@ const api = {
         }
         return data;
     },
-    // silent variant — 401 errors don't redirect to login (safe for polling)
+    // silent variants — 401 errors don't redirect to login (safe for polling)
     poll(path) { return this.request('GET', path, null, { silent: true }); },
+    poll_post(path, body = {}) { return this.request('POST', path, body, { silent: true }); },
     get(path) { return this.request('GET', path); },
     post(path, body) { return this.request('POST', path, body); },
     put(path, body) { return this.request('PUT', path, body); },

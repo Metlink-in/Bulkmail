@@ -1,8 +1,9 @@
 ﻿import asyncio
+import os
 import time
 import uuid
 import base64
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -372,8 +373,135 @@ async def get_job_status(db, user_id, job_id) -> dict:
         "sent_count": sent,
         "failed_count": failed,
         "total_count": total,
-        "current_recipient": None,
+        "current_recipient": job.get("current_recipient"),
         "progress_pct": pct,
         "started_at": started_at,
-        "elapsed_seconds": int(elapsed)
+        "elapsed_seconds": int(elapsed),
+        "next_send_at": job.get("next_send_at"),
     }
+
+
+async def tick_mail_job(db, user_id: str, job_id: str) -> dict:
+    """
+    Serverless-compatible single-step processor.
+    Called by the client poll loop — advances the job by one email each
+    time the configured delay has passed. Safe to call as often as desired;
+    it does nothing if it is not yet time to send the next email.
+    """
+    from utils.helpers import get_current_timestamp
+
+    job = await db.mail_jobs.find_one({"_id": job_id, "user_id": user_id})
+    if not job:
+        return {}
+
+    status = job.get("status")
+
+    # Kick off a queued job on first tick
+    if status == "queued":
+        now = get_current_timestamp()
+        await db.mail_jobs.update_one(
+            {"_id": job_id},
+            {"$set": {"status": "running", "next_send_at": now, "updated_at": now}}
+        )
+        job = await db.mail_jobs.find_one({"_id": job_id})
+        status = "running"
+
+    if status != "running":
+        return await get_job_status(db, user_id, job_id)
+
+    # Not yet time to send next email
+    now = get_current_timestamp()
+    next_send_at = job.get("next_send_at")
+    if next_send_at:
+        if hasattr(next_send_at, 'tzinfo') and next_send_at.tzinfo is None:
+            next_send_at = next_send_at.replace(tzinfo=timezone.utc)
+        if next_send_at > now:
+            return await get_job_status(db, user_id, job_id)
+
+    smtp_settings = await get_user_smtp_settings(db, user_id, job.get("sender_profile_id"))
+    if not smtp_settings:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "failed", "error": "SMTP not configured", "updated_at": now}})
+        return await get_job_status(db, user_id, job_id)
+
+    template = await db.mail_templates.find_one({"_id": job.get("template_id")})
+    if not template:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "failed", "error": "Template not found", "updated_at": now}})
+        return await get_job_status(db, user_id, job_id)
+
+    delay_seconds = max(MIN_DELAY_SECONDS, job.get("interval_seconds") or smtp_settings.get("email_delay_seconds") or DEFAULT_DELAY_SECONDS)
+    daily_limit = job.get("daily_limit") or smtp_settings.get("daily_send_limit") or 500
+
+    # Load contacts
+    contacts = []
+    if job.get("contact_list_id"):
+        contacts.extend(await db.contacts.find({"list_id": job["contact_list_id"]}).to_list(None))
+    for cid in job.get("contact_ids", []):
+        c = await db.contacts.find_one({"_id": cid})
+        if c:
+            contacts.append(c)
+    contacts = list({c["_id"]: c for c in contacts}.values())
+
+    if not contacts:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "completed", "completed_at": now}})
+        return await get_job_status(db, user_id, job_id)
+
+    logs = await db.mail_logs.find({"job_id": job_id}).to_list(None)
+    processed_ids = {log["contact_id"] for log in logs}
+
+    next_contact = next((c for c in contacts if c["_id"] not in processed_ids), None)
+    if not next_contact:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "completed", "completed_at": now}})
+        return await get_job_status(db, user_id, job_id)
+
+    # Daily limit check
+    start_of_day = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_sent = await db.mail_logs.count_documents({"user_id": user_id, "status": "sent", "sent_at": {"$gte": start_of_day}})
+    if today_sent >= daily_limit:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "paused", "updated_at": now}})
+        return await get_job_status(db, user_id, job_id)
+
+    from_email = smtp_settings.get("smtp_user", "")
+    domain = from_email.split("@")[-1] if "@" in from_email else "bulkreach.local"
+    personalization_data = {**next_contact.get("custom_fields", {}), "first_name": next_contact.get("name", ""), "company": next_contact.get("org", "")}
+
+    msg = await build_email_message(
+        to_email=next_contact["email"],
+        to_name=next_contact.get("name", ""),
+        subject=template["subject"],
+        html_body=template["html_body"],
+        from_name=job.get("from_name_override") or smtp_settings.get("from_name", ""),
+        from_email=from_email,
+        reply_to=job.get("reply_to_override") or smtp_settings.get("reply_to_email", ""),
+        message_id_domain=domain,
+        personalization_data=personalization_data,
+        attachments=job.get("attachments_base64", [])
+    )
+
+    res = await send_single_email(smtp_settings, msg, next_contact["email"])
+
+    await db.mail_logs.insert_one({
+        "_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "job_id": job_id,
+        "contact_id": next_contact["_id"],
+        "email": next_contact["email"],
+        "sent_at": now,
+        "status": "sent" if res["success"] else "failed",
+        "error_message": res["error"],
+        "message_id": res["message_id"]
+    })
+
+    update = {
+        "next_send_at": now + timedelta(seconds=delay_seconds),
+        "current_recipient": next_contact["email"],
+        "updated_at": now,
+    }
+
+    total = len(contacts)
+    done = await db.mail_logs.count_documents({"job_id": job_id})
+    if done >= total:
+        update["status"] = "completed"
+        update["completed_at"] = now
+    await db.mail_jobs.update_one({"_id": job_id}, {"$set": update})
+
+    return await get_job_status(db, user_id, job_id)

@@ -3,15 +3,17 @@ from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta, timezone
 import uuid
+import os
 
 from database import get_db
 from middleware.auth_middleware import require_user
 from services.mail_service import (
-    pause_job, resume_job, cancel_job, get_job_status,
+    pause_job, resume_job, cancel_job, get_job_status, tick_mail_job,
     send_single_email, build_email_message, get_user_smtp_settings
 )
-from services.scheduler_service import schedule_job
 from utils.helpers import get_current_timestamp, json_safe
+
+_IS_VERCEL = bool(os.environ.get("VERCEL"))
 
 router = APIRouter(tags=["mail"])
 
@@ -72,15 +74,18 @@ async def create_mail_job(body: MailJobCreate, current_user: Dict[str, Any] = De
     }
     
     await db.mail_jobs.insert_one(job_doc)
-    
+
     total = 0
     if body.contact_list_id:
         total = await db.contacts.count_documents({"list_id": body.contact_list_id})
     elif body.contact_ids:
         total = len(body.contact_ids)
-        
-    await schedule_job(db, job_id, scheduled_at)
-    
+
+    if not _IS_VERCEL:
+        from services.scheduler_service import schedule_job
+        await schedule_job(db, job_id, scheduled_at)
+    # On Vercel: the client's tick polling drives execution — no scheduler needed
+
     return json_safe({
         "job_id": job_id,
         "status": "queued",
@@ -111,6 +116,12 @@ async def get_mail_job_details(job_id: str, current_user: Dict[str, Any] = Depen
 async def poll_job_status(job_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
     user_id = str(current_user["_id"])
     return json_safe(await get_job_status(db, user_id, job_id))
+
+@router.post("/jobs/{job_id}/tick")
+async def tick_job(job_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+    """Serverless-friendly: advance job by one email if the delay has passed."""
+    user_id = str(current_user["_id"])
+    return json_safe(await tick_mail_job(db, user_id, job_id))
 
 @router.post("/jobs/{job_id}/pause")
 async def pause_job_route(job_id: str, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):

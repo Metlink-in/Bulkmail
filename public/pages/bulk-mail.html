@@ -635,9 +635,10 @@
             let consecutiveErrors = 0;
             const MAX_ERRORS = 3;
 
-            jobPollInterval = setInterval(async () => {
+            async function doTick() {
                 try {
-                    const status = await api.poll(`/mail/jobs/${jobId}/status`);
+                    // POST /tick — advances job by one email if delay has passed, returns status
+                    const status = await api.poll_post(`/mail/jobs/${jobId}/tick`);
                     consecutiveErrors = 0;
 
                     document.getElementById('jobProgressBar').style.width = status.progress_pct + '%';
@@ -646,7 +647,11 @@
                     document.getElementById('jobStatusLabel').textContent = `Campaign Status: ${status.status.toUpperCase()}`;
 
                     if(status.current_recipient) {
-                        document.getElementById('currentRecipient').textContent = `Sending to: ${status.current_recipient}`;
+                        document.getElementById('currentRecipient').textContent = `Last sent to: ${status.current_recipient}`;
+                    }
+                    if(status.next_send_at) {
+                        const secsLeft = Math.max(0, Math.round((new Date(status.next_send_at) - Date.now()) / 1000));
+                        if(secsLeft > 0) document.getElementById('currentRecipient').textContent += ` · next in ${secsLeft}s`;
                     }
 
                     if(status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
@@ -655,17 +660,19 @@
                         document.getElementById('liveBadge').style.animation = 'none';
                         document.getElementById('liveBadge').textContent = 'FINISHED';
                         document.getElementById('liveBadge').className = 'badge badge-neutral';
-                        document.getElementById('currentRecipient').textContent = '';
                     }
                 } catch (err) {
                     consecutiveErrors++;
                     if(consecutiveErrors >= MAX_ERRORS) {
                         clearInterval(jobPollInterval);
                         jobPollInterval = null;
-                        document.getElementById('jobStatusLabel').textContent = 'Status check failed — refresh to reconnect';
+                        document.getElementById('jobStatusLabel').textContent = 'Connection lost — refresh to reconnect';
                     }
                 }
-            }, 8000);
+            }
+
+            doTick(); // immediate first tick
+            jobPollInterval = setInterval(doTick, 8000);
         }
 
         window.addEventListener('beforeunload', () => {
