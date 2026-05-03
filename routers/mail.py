@@ -69,6 +69,7 @@ async def create_mail_job(body: MailJobCreate, current_user: Dict[str, Any] = De
         "from_name_override": body.from_name_override,
         "reply_to_override": body.reply_to_override,
         "attachments_base64": body.attachments_base64,
+        "total_recipients": 0,
         "created_at": now,
         "updated_at": now
     }
@@ -80,6 +81,9 @@ async def create_mail_job(body: MailJobCreate, current_user: Dict[str, Any] = De
         total = await db.contacts.count_documents({"list_id": body.contact_list_id})
     elif body.contact_ids:
         total = len(body.contact_ids)
+
+    if total:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"total_recipients": total}})
 
     if not _IS_VERCEL:
         from services.scheduler_service import schedule_job
@@ -94,11 +98,44 @@ async def create_mail_job(body: MailJobCreate, current_user: Dict[str, Any] = De
     })
 
 @router.get("/jobs")
-async def get_mail_jobs(page: int = 1, limit: int = 50, current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):
+async def get_mail_jobs(
+    page: int = 1, limit: int = 50,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(require_user),
+    db = Depends(get_db)
+):
     user_id = str(current_user["_id"])
+    query: Dict[str, Any] = {"user_id": user_id}
+    if status:
+        query["status"] = status
+    if search:
+        query["_id"] = {"$regex": search, "$options": "i"}
+
     skip = (page - 1) * limit
-    cursor = db.mail_jobs.find({"user_id": user_id}).sort("created_at", -1).skip(skip).limit(limit)
+    cursor = db.mail_jobs.find(query).sort("created_at", -1).skip(skip).limit(limit)
     jobs = await cursor.to_list(length=limit)
+
+    if jobs:
+        job_ids = [j["_id"] for j in jobs]
+        pipeline = [
+            {"$match": {"job_id": {"$in": job_ids}, "user_id": user_id}},
+            {"$group": {
+                "_id": "$job_id",
+                "sent_count":   {"$sum": {"$cond": [{"$eq": ["$status", "sent"]}, 1, 0]}},
+                "failed_count": {"$sum": {"$cond": [{"$ne": ["$status", "sent"]}, 1, 0]}},
+                "log_total":    {"$sum": 1}
+            }}
+        ]
+        stats = await db.mail_logs.aggregate(pipeline).to_list(None)
+        stats_map = {s["_id"]: s for s in stats}
+
+        for j in jobs:
+            s = stats_map.get(j["_id"], {})
+            j["sent_count"]   = s.get("sent_count", 0)
+            j["failed_count"] = s.get("failed_count", 0)
+            j["total_count"]  = j.get("total_recipients") or s.get("log_total", 0)
+
     return json_safe(jobs)
 
 @router.get("/jobs/{job_id}")
