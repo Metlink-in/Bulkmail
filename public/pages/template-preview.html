@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,12 +10,37 @@
     <link rel="stylesheet" href="/css/dashboard.css">
     <style>
         .split-view { display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: calc(100vh - 160px); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-        .editor-pane { background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .editor-pane { background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
         .preview-pane { background: #f0f0f0; display: flex; flex-direction: column; align-items: center; padding: 32px; overflow-y: auto; }
-        .preview-frame-container { background: #fff; width: 100%; max-width: 600px; box-shadow: var(--shadow-md); border-radius: 4px; min-height: 800px; transition: width 0.3s; }
+        .preview-frame-container { background: #fff; width: 100%; max-width: 600px; box-shadow: var(--shadow-md); border-radius: 4px; min-height: 600px; transition: max-width 0.3s; }
         .preview-frame-container.mobile { max-width: 375px; }
-        .raw-editor { flex: 1; font-family: monospace; padding: 20px; border: none; resize: none; outline: none; background: #1e1e1e; color: #d4d4d4; }
-        .pane-header { padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--bg-primary); display: flex; justify-content: space-between; align-items: center; }
+        .pane-header { padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg-primary); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+        /* Tabs */
+        .editor-tabs { display: flex; background: var(--bg-primary); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .editor-tab { padding: 8px 16px; font-size: 13px; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-secondary); font-weight: 500; white-space: nowrap; }
+        .editor-tab.active { border-bottom-color: var(--primary); color: var(--primary); }
+        .editor-tab:hover:not(.active) { color: var(--text-primary); background: var(--bg-secondary); }
+
+        /* Toolbar */
+        .editor-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 5px 8px; background: var(--bg-primary); border-bottom: 1px solid var(--border); flex-shrink: 0; align-items: center; }
+        .tb-btn { padding: 3px 7px; border: 1px solid transparent; border-radius: 3px; background: none; cursor: pointer; font-size: 13px; color: var(--text-primary); line-height: 1.4; min-width: 26px; text-align: center; }
+        .tb-btn:hover { background: var(--bg-secondary); border-color: var(--border); }
+        .tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; flex-shrink: 0; align-self: center; }
+        .tb-select { padding: 3px 5px; border: 1px solid var(--border); border-radius: 3px; font-size: 12px; background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; max-width: 110px; }
+        .tb-color-wrap { display: flex; align-items: center; gap: 2px; font-size: 11px; color: var(--text-secondary); cursor: pointer; }
+        .tb-color { width: 26px; height: 22px; padding: 1px; border: 1px solid var(--border); border-radius: 3px; cursor: pointer; background: none; }
+
+        /* Editor panels */
+        .editor-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+        .editor-panel.hidden { display: none; }
+        #editorIframe { flex: 1; border: none; width: 100%; display: block; }
+        .raw-editor { flex: 1; font-family: 'Consolas', 'Monaco', monospace; padding: 16px 20px; border: none; resize: none; outline: none; background: #1e1e1e; color: #d4d4d4; font-size: 13px; line-height: 1.6; tab-size: 2; }
+        .css-hint { padding: 6px 16px; background: #252526; color: #9cdcfe; font-size: 11px; font-family: monospace; flex-shrink: 0; border-bottom: 1px solid #333; }
+
+        /* Var bar */
+        .var-bar { padding: 10px 16px; background: var(--bg-primary); border-top: 1px solid var(--border); flex-shrink: 0; }
+        .var-bar-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; }
     </style>
 </head>
 <body>
@@ -39,7 +64,10 @@
             <header class="page-header">
                 <div style="display:flex; align-items:center; gap:16px;">
                     <a href="/pages/templates.html" class="btn btn-ghost btn-sm">← Back</a>
-                    <h1 class="page-title" id="templateName">New Template</h1>
+                    <h1 class="page-title" id="templateName" contenteditable="true" spellcheck="false"
+                        style="outline:none; min-width:80px; border-bottom:1px dashed transparent;"
+                        onfocus="this.style.borderBottomColor='var(--border)'"
+                        onblur="this.style.borderBottomColor='transparent'">New Template</h1>
                 </div>
                 <div class="page-header-actions">
                     <button class="btn btn-secondary" onclick="openTestModal()">Send Test</button>
@@ -48,33 +76,153 @@
             </header>
 
             <div class="split-view">
+                <!-- LEFT: Editor -->
                 <div class="editor-pane">
+
+                    <!-- Subject + Starter -->
                     <div class="pane-header">
-                        <div style="display:flex; gap:12px; width:100%; align-items:center;">
-                            <input type="text" id="tSubject" class="input" placeholder="Email Subject" style="border:none; background:transparent; font-weight:600; flex:1;">
-                            <select id="starterSelect" class="input" style="width:auto; padding:4px 8px; font-size:12px; border:1px solid var(--border);">
-                                <option value="">Choose Starter...</option>
-                            </select>
-                        </div>
+                        <input type="text" id="tSubject" class="input" placeholder="Email Subject"
+                               style="border:none; background:transparent; font-weight:600; flex:1; padding:4px 0;">
+                        <select id="starterSelect" class="input"
+                                style="width:auto; padding:4px 8px; font-size:12px; flex-shrink:0;">
+                            <option value="">Load starter...</option>
+                        </select>
                     </div>
-                    <textarea id="tBody" class="raw-editor" placeholder="Write your HTML here..."></textarea>
-                    
-                    <div style="padding:16px; background:var(--bg-primary); border-top:1px solid var(--border);">
-                        <label class="input-label">Variable Preview Data</label>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                            <input type="text" id="var_first_name" class="input" placeholder="First Name (preview)">
-                            <input type="text" id="var_company" class="input" placeholder="Company (preview)">
+
+                    <!-- Editor Tabs -->
+                    <div class="editor-tabs">
+                        <button class="editor-tab active" id="tabVisual" onclick="switchTab('visual')">&#9998; Visual</button>
+                        <button class="editor-tab" id="tabHtml"   onclick="switchTab('html')">HTML</button>
+                        <button class="editor-tab" id="tabCss"    onclick="switchTab('css')">CSS</button>
+                    </div>
+
+                    <!-- Formatting Toolbar (visual tab only) -->
+                    <div class="editor-toolbar" id="editorToolbar">
+                        <!-- Font family -->
+                        <select class="tb-select" title="Font Family"
+                                onchange="execCmd('fontName', this.value); this.blur()">
+                            <option value="Arial, sans-serif">Arial</option>
+                            <option value="Georgia, serif">Georgia</option>
+                            <option value="'Helvetica Neue', sans-serif">Helvetica</option>
+                            <option value="'Times New Roman', serif">Times New Roman</option>
+                            <option value="Verdana, sans-serif">Verdana</option>
+                            <option value="'Courier New', monospace">Courier New</option>
+                            <option value="Tahoma, sans-serif">Tahoma</option>
+                        </select>
+
+                        <!-- Font size -->
+                        <select class="tb-select" title="Font Size" style="width:60px"
+                                onchange="execFontSize(this.value); this.value=''">
+                            <option value="">Size</option>
+                            <option value="10">10</option>
+                            <option value="12">12</option>
+                            <option value="14">14</option>
+                            <option value="16">16</option>
+                            <option value="18">18</option>
+                            <option value="20">20</option>
+                            <option value="24">24</option>
+                            <option value="28">28</option>
+                            <option value="32">32</option>
+                            <option value="36">36</option>
+                            <option value="48">48</option>
+                        </select>
+
+                        <div class="tb-sep"></div>
+
+                        <!-- Heading shortcuts -->
+                        <select class="tb-select" title="Paragraph style" style="width:80px"
+                                onchange="execCmd('formatBlock', this.value); this.value=''">
+                            <option value="">Style</option>
+                            <option value="p">Paragraph</option>
+                            <option value="h1">Heading 1</option>
+                            <option value="h2">Heading 2</option>
+                            <option value="h3">Heading 3</option>
+                            <option value="blockquote">Blockquote</option>
+                            <option value="pre">Code</option>
+                        </select>
+
+                        <div class="tb-sep"></div>
+
+                        <!-- Format -->
+                        <button class="tb-btn" onclick="execCmd('bold')"          title="Bold"><b>B</b></button>
+                        <button class="tb-btn" onclick="execCmd('italic')"        title="Italic"><i>I</i></button>
+                        <button class="tb-btn" onclick="execCmd('underline')"     title="Underline"><u>U</u></button>
+                        <button class="tb-btn" onclick="execCmd('strikeThrough')" title="Strikethrough"><s>S</s></button>
+
+                        <div class="tb-sep"></div>
+
+                        <!-- Colors -->
+                        <label class="tb-color-wrap" title="Text Color">
+                            A&nbsp;<input type="color" class="tb-color" id="textColorPicker" value="#000000"
+                                          oninput="execCmd('foreColor', this.value)">
+                        </label>
+                        <label class="tb-color-wrap" title="Highlight / Background Color">
+                            BG&nbsp;<input type="color" class="tb-color" id="bgColorPicker" value="#ffff00"
+                                           oninput="execCmd('hiliteColor', this.value)">
+                        </label>
+
+                        <div class="tb-sep"></div>
+
+                        <!-- Alignment -->
+                        <button class="tb-btn" onclick="execCmd('justifyLeft')"   title="Align Left">&#8676;L</button>
+                        <button class="tb-btn" onclick="execCmd('justifyCenter')" title="Center">&#9632;C</button>
+                        <button class="tb-btn" onclick="execCmd('justifyRight')"  title="Align Right">R&#8677;</button>
+
+                        <div class="tb-sep"></div>
+
+                        <!-- Lists -->
+                        <button class="tb-btn" onclick="execCmd('insertUnorderedList')" title="Bullet List">&#8226; List</button>
+                        <button class="tb-btn" onclick="execCmd('insertOrderedList')"   title="Numbered List">1. List</button>
+
+                        <div class="tb-sep"></div>
+
+                        <!-- Insert -->
+                        <button class="tb-btn" onclick="doInsertLink()"    title="Insert Link">&#128279; Link</button>
+                        <button class="tb-btn" onclick="doInsertImage()"   title="Insert Image">&#128247; Img</button>
+                        <button class="tb-btn" onclick="doInsertButton()"  title="Insert Button">&#9646; Btn</button>
+                        <button class="tb-btn" onclick="doInsertDivider()" title="Insert Divider">&#8212; HR</button>
+
+                        <div class="tb-sep"></div>
+
+                        <!-- Clear -->
+                        <button class="tb-btn" onclick="execCmd('removeFormat')" title="Clear Formatting" style="font-size:11px;">&#10006; Fmt</button>
+                    </div>
+
+                    <!-- Visual panel -->
+                    <div class="editor-panel" id="panelVisual">
+                        <iframe id="editorIframe" style="flex:1; border:none; width:100%; display:block;"></iframe>
+                    </div>
+
+                    <!-- HTML panel -->
+                    <div class="editor-panel hidden" id="panelHtml">
+                        <textarea id="tBody" class="raw-editor" placeholder="Write your HTML email body here...&#10;&#10;Tip: use {first_name}, {company} as variables."></textarea>
+                    </div>
+
+                    <!-- CSS panel -->
+                    <div class="editor-panel hidden" id="panelCss">
+                        <div class="css-hint">/* Custom CSS — applied to preview and saved with template */</div>
+                        <textarea id="tCss" class="raw-editor"
+                                  placeholder="/* Style your email */&#10;body { font-family: Arial, sans-serif; background: #f4f4f4; }&#10;.container { max-width: 600px; margin: 0 auto; background: #fff; padding: 40px; }&#10;h1 { color: #1a1a2e; }&#10;.btn { background: #007bff; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; display: inline-block; }"></textarea>
+                    </div>
+
+                    <!-- Variable preview -->
+                    <div class="var-bar">
+                        <div class="var-bar-label">Preview variables</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <input type="text" id="var_first_name" class="input" placeholder="First Name" style="font-size:12px;">
+                            <input type="text" id="var_company"    class="input" placeholder="Company"    style="font-size:12px;">
                         </div>
                     </div>
                 </div>
 
+                <!-- RIGHT: Preview -->
                 <div class="preview-pane">
-                    <div style="display:flex; gap:12px; margin-bottom:16px;">
+                    <div style="display:flex; gap:12px; margin-bottom:16px; align-items:center;">
                         <button class="btn btn-sm btn-secondary active" onclick="setPreviewSize('desktop')">Desktop</button>
-                        <button class="btn btn-sm btn-secondary" onclick="setPreviewSize('mobile')">Mobile</button>
+                        <button class="btn btn-sm btn-secondary"        onclick="setPreviewSize('mobile')">Mobile</button>
                     </div>
                     <div id="previewContainer" class="preview-frame-container">
-                        <iframe id="previewIframe" style="width:100%; height:100%; border:none;"></iframe>
+                        <iframe id="previewIframe" style="width:100%; border:none; min-height:600px; display:block;"></iframe>
                     </div>
                 </div>
             </div>
@@ -93,7 +241,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="sendTest()">Send Test</button>
+                <button class="btn btn-primary"   onclick="sendTest()">Send Test</button>
             </div>
         </div>
     </div>
@@ -103,107 +251,350 @@
     <script src="/js/api.js"></script>
     <script>
         requireAuth();
-        const urlParams = new URLSearchParams(window.location.search);
-        let currentId = urlParams.get('id');
 
-        function showToast(msg, type="success") {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = msg;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentId   = urlParams.get('id');
+        let _activeTab  = 'visual';
+        let _editorReady = false;
+        let _isFullDoc  = false;
+        let _fullHtml   = null;   // original full-document HTML stored in DB
+
+        /* ── Toast ───────────────────────────────────────────────────── */
+        function showToast(msg, type = 'success') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
         }
 
-        function closeModal() { document.getElementById('testModal').style.display = 'none'; }
-        function openTestModal() { document.getElementById('testModal').style.display = 'flex'; }
+        /* ── Modal ───────────────────────────────────────────────────── */
+        function closeModal()     { document.getElementById('testModal').style.display = 'none'; }
+        function openTestModal()  { document.getElementById('testModal').style.display = 'flex'; }
 
+        /* ── Tabs ────────────────────────────────────────────────────── */
+        function switchTab(tab) {
+            if (tab === _activeTab) return;
+
+            // Sync out before leaving current tab
+            if (_activeTab === 'visual')              _syncHtmlFromVisual();
+            if (_activeTab === 'html' && tab === 'visual') _syncVisualFromHtml();
+
+            _activeTab = tab;
+
+            ['visual','html','css'].forEach(t => {
+                document.getElementById('panel' + _cap(t)).classList.toggle('hidden', t !== tab);
+                document.getElementById('tab'   + _cap(t)).classList.toggle('active', t === tab);
+            });
+            document.getElementById('editorToolbar').style.display = tab === 'visual' ? '' : 'none';
+
+            // Refresh visual CSS when returning to it
+            if (tab === 'visual' && _editorReady) _injectEditorCss();
+
+            updatePreview();
+        }
+
+        function _cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+        /* ── Visual editor (designMode iframe) ───────────────────────── */
+        function _initEditorIframe(bodyHtml) {
+            _editorReady = false;
+            const frame  = document.getElementById('editorIframe');
+            const css    = document.getElementById('tCss').value || '';
+
+            frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style id="_es">
+  body { font-family: Arial, sans-serif; padding: 24px 28px; line-height: 1.6; color: #333; margin: 0; min-height: 300px; }
+  img  { max-width: 100%; height: auto; }
+  ${css}
+</style></head><body>${bodyHtml || '<p>Start typing your email...</p>'}</body></html>`;
+
+            frame.onload = () => {
+                try {
+                    frame.contentDocument.designMode = 'on';
+                    frame.contentDocument.addEventListener('input', () => {
+                        _syncHtmlFromVisual();
+                        updatePreview();
+                    });
+                    _editorReady = true;
+                } catch(e) {}
+            };
+        }
+
+        function _injectEditorCss() {
+            const frame = document.getElementById('editorIframe');
+            if (!frame.contentDocument) return;
+            let s = frame.contentDocument.getElementById('_es');
+            if (!s) return;
+            const custom = document.getElementById('tCss').value || '';
+            s.textContent = `body{font-family:Arial,sans-serif;padding:24px 28px;line-height:1.6;color:#333;margin:0;min-height:300px;}img{max-width:100%;height:auto;}${custom}`;
+        }
+
+        function _getEditorBodyHtml() {
+            const frame = document.getElementById('editorIframe');
+            if (!frame.contentDocument || !frame.contentDocument.body) return '';
+            return frame.contentDocument.body.innerHTML;
+        }
+
+        function _setEditorBodyHtml(html) {
+            const frame = document.getElementById('editorIframe');
+            if (!frame.contentDocument || !frame.contentDocument.body) return;
+            frame.contentDocument.body.innerHTML = html;
+        }
+
+        function _syncHtmlFromVisual() {
+            document.getElementById('tBody').value = _getEditorBodyHtml();
+        }
+
+        function _syncVisualFromHtml() {
+            if (!_editorReady) return;
+            _setEditorBodyHtml(document.getElementById('tBody').value);
+        }
+
+        /* ── execCommand helpers ─────────────────────────────────────── */
+        function execCmd(cmd, value = null) {
+            const frame = document.getElementById('editorIframe');
+            if (!frame.contentDocument) return;
+            frame.contentWindow.focus();
+            frame.contentDocument.execCommand(cmd, false, value);
+            _syncHtmlFromVisual();
+            updatePreview();
+        }
+
+        function execFontSize(px) {
+            if (!px) return;
+            // execCommand fontSize uses 1-7; workaround via span
+            execCmd('fontSize', 7);
+            const frame = document.getElementById('editorIframe');
+            frame.contentDocument.querySelectorAll('font[size="7"]').forEach(n => {
+                n.removeAttribute('size');
+                n.style.fontSize = px + 'px';
+            });
+            _syncHtmlFromVisual();
+            updatePreview();
+        }
+
+        function doInsertLink() {
+            const url  = prompt('Link URL:', 'https://');
+            if (!url) return;
+            const text = prompt('Link text:', 'Click here') ?? 'Click here';
+            execCmd('insertHTML', `<a href="${url}" target="_blank" style="color:#007bff;">${text}</a>`);
+        }
+
+        function doInsertImage() {
+            const url = prompt('Image URL (https://...):');
+            if (!url) return;
+            execCmd('insertHTML', `<img src="${url}" alt="" style="max-width:100%;height:auto;display:block;margin:12px 0;">`);
+        }
+
+        function doInsertButton() {
+            const label = prompt('Button label:', 'Get Started') ?? 'Get Started';
+            const url   = prompt('Button URL:', 'https://') ?? '#';
+            execCmd('insertHTML',
+                `<a href="${url}" target="_blank" style="display:inline-block;background:#007bff;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;margin:12px 0;">${label}</a>`);
+        }
+
+        function doInsertDivider() {
+            execCmd('insertHTML', '<hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;">');
+        }
+
+        /* ── Preview ─────────────────────────────────────────────────── */
+        const PREVIEW_VARS = {
+            '{first_name}':'John','{{first_name}}':'John','{name}':'John','{{name}}':'John',
+            '{company}':'Acme Corp','{{company}}':'Acme Corp',
+            '{company_name}':'Acme Corp','{{company_name}}':'Acme Corp',
+            '{org}':'Acme Corp','{{org}}':'Acme Corp',
+            '{{industry}}':'Technology','{{your_name}}':'Your Name','{{your_role}}':'CEO',
+            '{{personalized_line}}':'your recent work caught our eye',
+            '{{result_metric}}':'40% more replies','{{cta_link}}':'#','{{unsubscribe_link}}':'#'
+        };
+
+        function _applyVars(s) {
+            const fn  = document.getElementById('var_first_name').value || 'John';
+            const co  = document.getElementById('var_company').value    || 'Acme Corp';
+            const map = { ...PREVIEW_VARS, '{first_name}': fn, '{{first_name}}': fn, '{name}': fn,
+                          '{company}': co, '{{company}}': co, '{company_name}': co, '{{company_name}}': co,
+                          '{org}': co, '{{org}}': co };
+            for (const k in map) s = s.split(k).join(map[k]);
+            return s;
+        }
+
+        function updatePreview() {
+            const iframe    = document.getElementById('previewIframe');
+            const customCss = document.getElementById('tCss').value || '';
+
+            const bodyHtml  = _activeTab === 'visual'
+                ? (_getEditorBodyHtml() || '<p style="color:#aaa">No content yet.</p>')
+                : (document.getElementById('tBody').value || '<p style="color:#aaa">No content yet.</p>');
+
+            let srcdoc;
+
+            if (_isFullDoc && _fullHtml) {
+                let html = _fullHtml;
+                // Inject custom CSS (replace any previously injected block)
+                html = html.replace(/<!-- tpl-css-start -->[\s\S]*?<!-- tpl-css-end -->/g, '');
+                if (customCss) {
+                    html = html.replace('</head>',
+                        `<!-- tpl-css-start --><style>\n${customCss}\n</style><!-- tpl-css-end -->\n</head>`);
+                }
+                html = html.replace(
+                    /(<body[^>]*>)([\s\S]*?)(<\/body\s*>)/i,
+                    (_, o, _b, c) => o + bodyHtml + c
+                );
+                srcdoc = _applyVars(html);
+            } else {
+                srcdoc = _applyVars(
+                    `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>body{font-family:Arial,sans-serif;padding:24px 28px;line-height:1.6;color:#333;margin:0}img{max-width:100%;height:auto}
+${customCss}</style></head><body>${bodyHtml}</body></html>`
+                );
+            }
+
+            iframe.srcdoc = srcdoc;
+            iframe.onload = () => {
+                try {
+                    iframe.style.height = Math.max(400, iframe.contentDocument.body.scrollHeight + 20) + 'px';
+                } catch(e) {}
+            };
+        }
+
+        /* ── Load HTML into editor ───────────────────────────────────── */
+        function _loadHtml(html) {
+            html = html || '';
+            _isFullDoc = html.toLowerCase().includes('<html');
+
+            if (_isFullDoc) {
+                _fullHtml = html;
+                const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body\s*>/i);
+                const bodyContent = bodyMatch ? bodyMatch[1] : '';
+                // Extract all <style> blocks from <head>
+                const cssBlocks = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
+                    .map(m => m[1].trim()).join('\n\n');
+                document.getElementById('tCss').value  = cssBlocks;
+                document.getElementById('tBody').value = bodyContent;
+                _initEditorIframe(bodyContent);
+            } else {
+                _fullHtml = null;
+                // Extract leading <style> block if any
+                const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+                if (styleMatch) {
+                    document.getElementById('tCss').value  = styleMatch[1].trim();
+                    const noStyle = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').trim();
+                    document.getElementById('tBody').value = noStyle;
+                    _initEditorIframe(noStyle);
+                } else {
+                    document.getElementById('tCss').value  = '';
+                    document.getElementById('tBody').value = html;
+                    _initEditorIframe(html);
+                }
+            }
+            updatePreview();
+        }
+
+        /* ── Build final HTML for save ───────────────────────────────── */
+        function _buildFinalHtml() {
+            if (_activeTab === 'visual') _syncHtmlFromVisual();
+            const bodyHtml  = document.getElementById('tBody').value;
+            const customCss = document.getElementById('tCss').value.trim();
+
+            if (_isFullDoc && _fullHtml) {
+                let html = _fullHtml;
+                html = html.replace(/<!-- tpl-css-start -->[\s\S]*?<!-- tpl-css-end -->/g, '');
+                if (customCss) {
+                    html = html.replace('</head>',
+                        `<!-- tpl-css-start --><style>\n${customCss}\n</style><!-- tpl-css-end -->\n</head>`);
+                }
+                html = html.replace(
+                    /(<body[^>]*>)([\s\S]*?)(<\/body\s*>)/i,
+                    (_, o, _b, c) => o + bodyHtml + c
+                );
+                return html;
+            } else {
+                return customCss
+                    ? `<style>\n${customCss}\n</style>\n${bodyHtml}`
+                    : bodyHtml;
+            }
+        }
+
+        /* ── API calls ───────────────────────────────────────────────── */
         async function loadTemplate() {
             try {
                 const templates = await api.get('/template');
                 const sSel = document.getElementById('starterSelect');
                 templates.forEach(t => {
-                    if(t.is_global) sSel.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+                    if (t.is_global) sSel.innerHTML += `<option value="${t.id}">${t.name}</option>`;
                 });
-                
+
                 sSel.addEventListener('change', async () => {
-                    if(!sSel.value) return;
+                    if (!sSel.value) return;
                     const t = await api.get(`/template/${sSel.value}`);
                     document.getElementById('tSubject').value = t.subject;
-                    document.getElementById('tBody').value = t.html_body;
-                    updatePreview();
+                    _loadHtml(t.html_body);
+                    sSel.value = '';
                 });
 
-                if(!currentId) return;
+                if (!currentId) {
+                    _initEditorIframe('');
+                    return;
+                }
+
                 const t = await api.get(`/template/${currentId}`);
                 document.getElementById('templateName').textContent = t.name;
-                document.getElementById('tSubject').value = t.subject;
-                document.getElementById('tBody').value = t.html_body;
-                updatePreview();
-            } catch (err) { showToast(err.message, "danger"); }
-        }
-
-        function updatePreview() {
-            const iframe = document.getElementById('previewIframe');
-            let html = document.getElementById('tBody').value || '';
-
-            const firstName = document.getElementById('var_first_name').value || 'John';
-            const company = document.getElementById('var_company').value || 'Acme Corp';
-            ['{first_name}','{name}'].forEach(k => html = html.split(k).join(firstName));
-            ['{org}','{company}','{company_name}','{{company_name}}','{{industry}}'].forEach(k => html = html.split(k).join(company));
-
-            const isFullDoc = html.toLowerCase().includes('<html');
-            if (isFullDoc) {
-                // Full document — use srcdoc directly, all CSS applies as-is
-                iframe.srcdoc = html;
-            } else {
-                iframe.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:20px;line-height:1.6;color:#333;margin:0}</style></head><body>${html || 'No content.'}</body></html>`;
-            }
-
-            iframe.onload = () => {
-                try { iframe.style.height = Math.max(400, iframe.contentDocument.body.scrollHeight + 20) + 'px'; } catch(e) {}
-            };
+                document.getElementById('tSubject').value           = t.subject;
+                _loadHtml(t.html_body);
+            } catch (err) { showToast(err.message, 'danger'); }
         }
 
         async function saveTemplate() {
-            const payload = {
-                name: document.getElementById('templateName').textContent,
-                subject: document.getElementById('tSubject').value,
-                html_body: document.getElementById('tBody').value
+            const finalHtml = _buildFinalHtml();
+            const name      = document.getElementById('templateName').textContent.trim();
+            const payload   = {
+                name,
+                subject:   document.getElementById('tSubject').value,
+                html_body: finalHtml
             };
-            
+
             try {
-                if(currentId) {
+                if (currentId) {
                     await api.put(`/template/${currentId}`, payload);
+                    if (_isFullDoc) _fullHtml = finalHtml;
+                    showToast('Template saved!');
                 } else {
-                    const name = prompt("Enter Template Name:");
-                    if(!name) return;
-                    payload.name = name;
+                    const newName = (name && name !== 'New Template') ? name : prompt('Template name:');
+                    if (!newName) return;
+                    payload.name  = newName;
                     const res = await api.post('/template', payload);
                     window.location.search = `?id=${res.id}`;
                 }
-                showToast("Template saved!");
-            } catch(e) { showToast(e.message, "danger"); }
+            } catch(e) { showToast(e.message, 'danger'); }
         }
 
         async function sendTest() {
             const email = document.getElementById('testEmail').value;
-            if(!email) return;
+            if (!email) return;
             try {
                 await api.post('/mail/test', { to_email: email, template_id: currentId });
-                showToast("Test email sent!");
+                showToast('Test email sent!');
                 closeModal();
-            } catch(e) { showToast(e.message, "danger"); }
+            } catch(e) { showToast(e.message, 'danger'); }
         }
 
         function setPreviewSize(type) {
-            const container = document.getElementById('previewContainer');
-            container.className = 'preview-frame-container ' + (type === 'mobile' ? 'mobile' : '');
-            document.querySelectorAll('.preview-pane .btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === type));
+            document.getElementById('previewContainer').className =
+                'preview-frame-container' + (type === 'mobile' ? ' mobile' : '');
+            document.querySelectorAll('.preview-pane .btn').forEach(b =>
+                b.classList.toggle('active', b.textContent.toLowerCase().trim() === type));
         }
 
+        /* ── Event wiring ────────────────────────────────────────────── */
         document.getElementById('tBody').addEventListener('input', updatePreview);
-        document.querySelectorAll('.editor-pane input').forEach(i => i.addEventListener('input', updatePreview));
+        document.getElementById('tCss').addEventListener('input', () => {
+            if (_editorReady) _injectEditorCss();
+            updatePreview();
+        });
+        document.getElementById('var_first_name').addEventListener('input', updatePreview);
+        document.getElementById('var_company').addEventListener('input', updatePreview);
 
         loadTemplate();
     </script>
