@@ -143,8 +143,8 @@ GLOBAL_TEMPLATES = [
       </table>
 
       <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
-        Best,<br><strong style="color:#1f2937;">Your Name</strong><br>
-        <span style="font-size:13px;color:#9ca3af;">Your Company · your@email.com</span>
+        Best,<br><strong style="color:#1f2937;">{sender_name}</strong><br>
+        <span style="font-size:13px;color:#9ca3af;">{sender_email}</span>
       </p>
     </td>
   </tr>
@@ -219,8 +219,8 @@ GLOBAL_TEMPLATES = [
       </table>
 
       <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
-        Cheers,<br><strong style="color:#1f2937;">Your Name</strong><br>
-        <span style="font-size:13px;color:#9ca3af;">Your Company · your@email.com</span>
+        Cheers,<br><strong style="color:#1f2937;">{sender_name}</strong><br>
+        <span style="font-size:13px;color:#9ca3af;">{sender_email}</span>
       </p>
     </td>
   </tr>
@@ -303,8 +303,8 @@ GLOBAL_TEMPLATES = [
       </table>
 
       <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
-        Talk soon,<br><strong style="color:#1f2937;">Your Name</strong><br>
-        <span style="font-size:13px;color:#9ca3af;">Your Company · your@email.com</span>
+        Talk soon,<br><strong style="color:#1f2937;">{sender_name}</strong><br>
+        <span style="font-size:13px;color:#9ca3af;">{sender_email}</span>
       </p>
     </td>
   </tr>
@@ -505,8 +505,8 @@ GLOBAL_TEMPLATES = [
       </table>
 
       <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
-        See you there,<br><strong style="color:#1f2937;">Your Name</strong><br>
-        <span style="font-size:13px;color:#9ca3af;">Your Company · your@email.com</span>
+        See you there,<br><strong style="color:#1f2937;">{sender_name}</strong><br>
+        <span style="font-size:13px;color:#9ca3af;">{sender_email}</span>
       </p>
     </td>
   </tr>
@@ -585,8 +585,8 @@ GLOBAL_TEMPLATES = [
       </table>
 
       <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
-        Hope to see you soon,<br><strong style="color:#1f2937;">Your Name</strong><br>
-        <span style="font-size:13px;color:#9ca3af;">Your Company</span>
+        Hope to see you soon,<br><strong style="color:#1f2937;">{sender_name}</strong><br>
+        <span style="font-size:13px;color:#9ca3af;">{sender_email}</span>
       </p>
     </td>
   </tr>
@@ -671,8 +671,8 @@ GLOBAL_TEMPLATES = [
       </table>
 
       <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
-        Speak soon,<br><strong style="color:#1f2937;">Your Name</strong><br>
-        <span style="font-size:13px;color:#9ca3af;">Your Company · your@email.com</span>
+        Speak soon,<br><strong style="color:#1f2937;">{sender_name}</strong><br>
+        <span style="font-size:13px;color:#9ca3af;">{sender_email}</span>
       </p>
     </td>
   </tr>
@@ -779,8 +779,8 @@ GLOBAL_TEMPLATES = [
       <p style="margin:0 0 24px;font-size:13px;color:#94a3b8;text-align:center;">Or reply to this email with any questions</p>
 
       <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
-        Looking forward to working together,<br><strong style="color:#1f2937;">Your Name</strong><br>
-        <span style="font-size:13px;color:#9ca3af;">Your Agency · your@email.com</span>
+        Looking forward to working together,<br><strong style="color:#1f2937;">{sender_name}</strong><br>
+        <span style="font-size:13px;color:#9ca3af;">{sender_email}</span>
       </p>
     </td>
   </tr>

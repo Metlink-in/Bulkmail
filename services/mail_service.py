@@ -108,14 +108,32 @@ async def build_email_message(
         "{custom_3}":   personalization_data.get("custom_3", ""),
         "{custom_4}":   personalization_data.get("custom_4", ""),
         "{custom_5}":   personalization_data.get("custom_5", ""),
+        "{sender_name}":  from_name or "",
+        "{sender_email}": from_email or "",
     }
-    
+
     s_sub = subject
     s_body = html_body
     for token, val in tokens.items():
         s_sub = s_sub.replace(token, str(val))
         s_body = s_body.replace(token, str(val))
-        
+
+    # Clean up dangling prepositions when {org}/{company} resolved to empty string
+    import re as _re
+    # Subject: "Quick question for Jitesh at " -> "Quick question for Jitesh"
+    #          "idea for , Jitesh" -> "idea Jitesh"
+    s_sub = _re.sub(r'\b(?:at|for|of|by|with)\s+,\s*', ' ', s_sub, flags=_re.IGNORECASE)
+    s_sub = _re.sub(r'\s+\b(?:at|for|of|by|with)\s*$', '', s_sub.strip(), flags=_re.IGNORECASE)
+    s_sub = _re.sub(r'^\s*,\s*', '', s_sub)
+    s_sub = _re.sub(r'\s{2,}', ' ', s_sub).strip()
+    # HTML body: remove "at <empty-strong></strong>" and "at ." patterns
+    s_body = _re.sub(
+        r'\s*\b(?:at|for|of|by|with)\s+(<(?:strong|b|em|span)[^>]*>)\s*(</(?:strong|b|em|span)>)',
+        r' \1\2', s_body, flags=_re.IGNORECASE
+    )
+    s_body = _re.sub(r'\s+\b(?:at|for|of|by|with)\s+([.,])', r' \1', s_body, flags=_re.IGNORECASE)
+    s_body = _re.sub(r'  +', ' ', s_body)
+
     msg['Subject'] = s_sub
     msg['From'] = f"{from_name} <{from_email}>" if from_name else from_email
     msg['To'] = f"{to_name} <{to_email}>" if to_name else to_email
