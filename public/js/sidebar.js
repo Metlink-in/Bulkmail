@@ -255,6 +255,57 @@
     window.addEventListener('beforeunload', saveDraft);
   }
 
+  /* ── PWA Install Banner ─────────────────────────────────────────── */
+  let _installPrompt = null;
+
+  function _showInstallBanner(iosMode) {
+    if (document.getElementById('pwaInstallBanner')) return;
+    if (!document.getElementById('pwaInstallStyle')) {
+      const s = document.createElement('style');
+      s.id = 'pwaInstallStyle';
+      s.textContent = '@keyframes pwaSlideUp{from{transform:translateY(80px);opacity:0}to{transform:translateY(0);opacity:1}}';
+      document.head.appendChild(s);
+    }
+    const banner = document.createElement('div');
+    banner.id = 'pwaInstallBanner';
+    banner.style.cssText = 'position:fixed;bottom:20px;left:12px;right:12px;background:#1e293b;color:#fff;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 32px rgba(0,0,0,0.4);z-index:9999;border:1px solid rgba(255,255,255,0.12);animation:pwaSlideUp 0.3s ease;';
+    if (iosMode) {
+      banner.innerHTML = '<div style="font-size:26px;flex-shrink:0;">📲</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;">Install BulkReach Pro</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">Tap <strong>Share</strong> ↑ → <strong>"Add to Home Screen"</strong></div></div><button onclick="localStorage.setItem(\'ios_pwa_dismissed\',\'1\');document.getElementById(\'pwaInstallBanner\').remove();" style="background:none;border:none;color:rgba(255,255,255,0.55);font-size:22px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;">&times;</button>';
+    } else {
+      banner.innerHTML = '<div style="font-size:26px;flex-shrink:0;">📲</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;">Install BulkReach Pro</div><div style="font-size:12px;opacity:0.75;margin-top:2px;">Add to home screen for a faster experience</div></div><button onclick="window._pwaInstall()" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;white-space:nowrap;">Install</button><button onclick="document.getElementById(\'pwaInstallBanner\').remove();" style="background:none;border:none;color:rgba(255,255,255,0.55);font-size:22px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;">&times;</button>';
+    }
+    document.body.appendChild(banner);
+    setTimeout(() => { if (banner.parentNode) banner.remove(); }, 15000);
+  }
+
+  window._pwaInstall = async function () {
+    if (!_installPrompt) return;
+    _installPrompt.prompt();
+    const { outcome } = await _installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      _installPrompt = null;
+      const b = document.getElementById('pwaInstallBanner');
+      if (b) b.remove();
+    }
+  };
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    _installPrompt = e;
+    if (window.innerWidth <= 900) {
+      setTimeout(function () { _showInstallBanner(false); }, 3000);
+    }
+  });
+
+  // iOS Safari: no beforeinstallprompt — show manual steps
+  (function () {
+    const isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent) && !window.MSStream;
+    if (!isIOS || window.navigator.standalone || localStorage.getItem('ios_pwa_dismissed')) return;
+    window.addEventListener('load', function () {
+      setTimeout(function () { _showInstallBanner(true); }, 3500);
+    });
+  })();
+
   /* ── Boot ──────────────────────────────────────────────────────── */
   function boot() {
     injectBackButton();

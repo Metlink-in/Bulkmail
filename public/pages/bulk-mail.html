@@ -99,6 +99,21 @@
                                 <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('insertUnorderedList')">• List</button>
                                 <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); insertLink()">Link</button>
                                 <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); insertImage()">Image</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('strikeThrough')" title="Strikethrough"><s style="text-decoration:line-through;pointer-events:none">S</s></button>
+                                <div style="width:1px; height:20px; background:var(--border); margin:0 4px;"></div>
+                                <select onmousedown="event.stopPropagation()" onchange="if(this.value) formatDoc('fontSize',this.value); this.value='';" class="input" style="width:auto; padding:4px 8px; font-size:12px;" title="Font Size">
+                                    <option value="">Size</option>
+                                    <option value="2">Small</option>
+                                    <option value="3">Normal</option>
+                                    <option value="5">Large</option>
+                                    <option value="7">XL</option>
+                                </select>
+                                <label title="Text Color" style="cursor:pointer;display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text-secondary);">A<input type="color" id="textColorPicker" value="#000000" onchange="formatDoc('foreColor',this.value)" style="width:24px;height:24px;border:1px solid var(--border);border-radius:3px;cursor:pointer;padding:1px;margin-left:2px;"></label>
+                                <label title="Highlight Color" style="cursor:pointer;display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text-secondary);">BG<input type="color" id="bgColorPicker" value="#ffff00" onchange="formatDoc('hiliteColor',this.value)" style="width:24px;height:24px;border:1px solid var(--border);border-radius:3px;cursor:pointer;padding:1px;margin-left:2px;"></label>
+                                <div style="width:1px; height:20px; background:var(--border); margin:0 4px;"></div>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('justifyLeft')" title="Align left" style="font-size:10px;font-weight:700;">≡L</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('justifyCenter')" title="Center" style="font-size:10px;font-weight:700;">≡C</button>
+                                <button type="button" class="btn btn-sm btn-ghost" onmousedown="event.preventDefault(); formatDoc('justifyRight')" title="Align right" style="font-size:10px;font-weight:700;">≡R</button>
                                 <div style="width:1px; height:20px; background:var(--border); margin:0 4px;"></div>
                                 <select id="templateSelect" class="input" style="width:auto; padding:4px 8px; font-size:12px;">
                                     <option value="">Load Template...</option>
@@ -111,7 +126,10 @@
                             <div style="font-size:13px; color:var(--text-secondary)">
                                 <span id="wordCount">0</span> words | <span id="charCount">0</span> characters
                             </div>
-                            <button id="saveAsTemplateBtn" class="btn btn-secondary">Save as New Template</button>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                                <button id="updateTemplateBtn" class="btn btn-secondary btn-sm" style="display:none;" title="Save changes back to the loaded template">Update Template</button>
+                                <button id="saveAsTemplateBtn" class="btn btn-secondary">Save as New Template</button>
+                            </div>
                         </div>
                     </div>
 
@@ -392,8 +410,8 @@
         let activeJobId = null;
         let jobPollInterval = null;
         let loadedContacts = [];
-        // Full template HTML stored separately so the preview can use it intact
         let _fullTemplateHtml = null;
+        let _currentTemplateId = null;
 
         function _parseTemplate(html) {
             // Use the browser's own HTML parser — handles all edge cases reliably
@@ -674,6 +692,21 @@
             } catch(e) { showToast(e.message, "danger"); }
         });
 
+        document.getElementById('updateTemplateBtn').addEventListener('click', async () => {
+            if (!_currentTemplateId) return;
+            const btn = document.getElementById('updateTemplateBtn');
+            btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                const { headStyles, bodyAttrs } = _fullTemplateHtml ? _parseTemplate(_fullTemplateHtml) : { headStyles: '', bodyAttrs: '' };
+                const saveHtml = _fullTemplateHtml
+                    ? `<!DOCTYPE html><html><head><meta charset="UTF-8">${headStyles}</head><body ${bodyAttrs}>${htmlBody.innerHTML}</body></html>`
+                    : htmlBody.innerHTML;
+                await api.put(`/template/${_currentTemplateId}`, { subject: subjectInput.value, html_body: saveHtml });
+                showToast('Template updated!');
+            } catch(e) { showToast(e.message, 'danger'); }
+            finally { btn.disabled = false; btn.textContent = 'Update Template'; }
+        });
+
         // --- CAMPAIGN LAUNCH ---
         async function launchCampaign(templateId) {
             const btn = document.getElementById('startCampaignBtn');
@@ -696,6 +729,7 @@
                 activeJobId = res.job_id;
                 showToast("Campaign launched successfully!");
                 startJobPolling(activeJobId);
+                btn.disabled = false; btn.textContent = "🚀 Launch Campaign";
             } catch (err) {
                 showToast(err.message, "danger");
                 btn.disabled = false;
@@ -703,17 +737,27 @@
             }
         }
 
-        document.getElementById('startCampaignBtn').addEventListener('click', () => {
+        document.getElementById('startCampaignBtn').addEventListener('click', async () => {
             if(!subjectInput.value || !htmlBody.innerText.trim()) return showToast("Subject and body are required", "warning");
             const selectedTemplateId = document.getElementById('templateSelect').value;
-            if(!selectedTemplateId) {
-                // No template selected — ask user to name and save it first
-                pendingLaunchAfterSave = true;
-                document.getElementById('newTemplateName').value = document.getElementById('campaignName').value || '';
-                document.getElementById('templateModal').style.display = 'flex';
-                return;
+            if(selectedTemplateId) { launchCampaign(selectedTemplateId); return; }
+            // No template selected — silently auto-save as temp (cleaned up on next page load)
+            const btn = document.getElementById('startCampaignBtn');
+            btn.disabled = true; btn.textContent = 'Preparing…';
+            try {
+                const { headStyles, bodyAttrs } = _fullTemplateHtml ? _parseTemplate(_fullTemplateHtml) : { headStyles: '', bodyAttrs: '' };
+                const saveHtml = _fullTemplateHtml
+                    ? `<!DOCTYPE html><html><head><meta charset="UTF-8">${headStyles}</head><body ${bodyAttrs}>${htmlBody.innerHTML}</body></html>`
+                    : htmlBody.innerHTML;
+                const tRes = await api.post('/template', {
+                    name: `Campaign ${new Date().toLocaleDateString()}`,
+                    subject: subjectInput.value, html_body: saveHtml
+                });
+                launchCampaign(tRes.id);
+            } catch(e) {
+                showToast(e.message, 'danger');
+                btn.disabled = false; btn.textContent = '🚀 Launch Campaign';
             }
-            launchCampaign(selectedTemplateId);
         });
 
         function startJobPolling(jobId) {
@@ -849,8 +893,9 @@
         }
 
         function startNewCampaign() {
-            // Reset progress UI for a fresh campaign
             activeJobId = null;
+            const launchBtn = document.getElementById('startCampaignBtn');
+            if (launchBtn) { launchBtn.disabled = false; launchBtn.textContent = '🚀 Launch Campaign'; }
             document.getElementById('liveProgress').style.display = 'none';
             document.getElementById('campaignDoneBanner').style.display = 'none';
             document.getElementById('jobProgressBar').style.width = '0%';
@@ -923,19 +968,25 @@
                     .forEach(t => { tSel.innerHTML += `<option value="${t.id}">${t.name}</option>`; });
                 
                 tSel.addEventListener('change', async () => {
-                    if(!tSel.value) return;
-                    const t = await api.get(`/template/${tSel.value}`);
-                    subjectInput.value = t.subject;
-                    const parsed = _parseTemplate(t.html_body);
-                    if (parsed.isFullDoc) {
-                        _fullTemplateHtml = t.html_body;
-                        htmlBody.innerHTML = parsed.bodyContent;
-                    } else {
-                        _fullTemplateHtml = null;
-                        htmlBody.innerHTML = t.html_body || '';
-                    }
-                    subjectInput.dispatchEvent(new Event('input'));
-                    updatePreview();
+                    const val = tSel.value;
+                    const updateBtn = document.getElementById('updateTemplateBtn');
+                    if (!val) { _currentTemplateId = null; if(updateBtn) updateBtn.style.display = 'none'; return; }
+                    try {
+                        const t = await api.get(`/template/${val}`);
+                        _currentTemplateId = val;
+                        if (updateBtn) updateBtn.style.display = (t.user_id === 'global') ? 'none' : 'inline-flex';
+                        subjectInput.value = t.subject;
+                        const parsed = _parseTemplate(t.html_body);
+                        if (parsed.isFullDoc) {
+                            _fullTemplateHtml = t.html_body;
+                            htmlBody.innerHTML = parsed.bodyContent;
+                        } else {
+                            _fullTemplateHtml = null;
+                            htmlBody.innerHTML = t.html_body || '';
+                        }
+                        subjectInput.dispatchEvent(new Event('input'));
+                        updatePreview();
+                    } catch(e) { showToast('Failed to load template', 'danger'); }
                 });
 
                 // Load History
