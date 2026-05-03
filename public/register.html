@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,47 +8,154 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/components.css">
     <style>
-        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-secondary); padding: 20px 0; }
-        .auth-card { width: 100%; max-width: 440px; padding: 40px; background: var(--bg-primary); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
-        .logo { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 32px; color: var(--text-primary); }
-        .logo span { color: var(--primary); }
-        .alert-error { background: rgba(239,68,68,0.1); color: var(--danger); padding: 12px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 16px; display: none; }
-        .auth-footer { text-align: center; margin-top: 24px; font-size: 14px; color: var(--text-secondary); }
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #0F172A;
+            padding: 24px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: -180px; right: -180px;
+            width: 560px; height: 560px;
+            background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 68%);
+            pointer-events: none;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -160px; left: -160px;
+            width: 480px; height: 480px;
+            background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 68%);
+            pointer-events: none;
+        }
+
+        .auth-wrap {
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .auth-brand {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .auth-brand-name {
+            font-size: 28px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+        .auth-brand-name span { color: #2563EB; }
+        .auth-brand-tagline {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            margin-top: 5px;
+            letter-spacing: 0.2px;
+        }
+
+        .auth-card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 36px 36px 28px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+        }
+        .auth-card-head { margin-bottom: 28px; }
+        .auth-card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 4px;
+        }
+        .auth-card-sub {
+            font-size: 13px;
+            color: #64748B;
+        }
+
+        .alert-error {
+            background: rgba(239,68,68,0.08);
+            color: #DC2626;
+            padding: 11px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+            border: 1px solid rgba(239,68,68,0.18);
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 22px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+        }
+        .auth-footer a {
+            color: #60A5FA;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .auth-footer a:hover { color: #93C5FD; text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            .auth-card { padding: 28px 20px 22px; }
+            .auth-brand-name { font-size: 24px; }
+        }
     </style>
 </head>
 <body>
-    <div class="auth-card">
-        <div class="logo">BulkReach <span>Pro</span></div>
-        <div id="errorMsg" class="alert-error"></div>
-        <form id="registerForm">
-            <div class="input-group">
-                <label class="input-label">Full Name</label>
-                <input type="text" id="name" class="input" required autofocus>
+    <div class="auth-wrap">
+        <div class="auth-brand">
+            <div class="auth-brand-name">BulkReach <span>Pro</span></div>
+            <div class="auth-brand-tagline">Start sending smarter in minutes</div>
+        </div>
+
+        <div class="auth-card">
+            <div class="auth-card-head">
+                <div class="auth-card-title">Create your account</div>
+                <div class="auth-card-sub">Free to start — no credit card required</div>
             </div>
-            <div class="input-group">
-                <label class="input-label">Email address</label>
-                <input type="email" id="email" class="input" required>
-            </div>
-            <div class="input-group">
-                <label class="input-label">Organization Name (Optional)</label>
-                <input type="text" id="org_name" class="input">
-            </div>
-            <div class="input-group">
-                <label class="input-label" style="display:flex; justify-content:space-between;">
-                    Password <span id="passwordStrength" style="font-size:12px; font-weight:400;"></span>
-                </label>
-                <input type="password" id="password" class="input" required minlength="8">
-            </div>
-            <div class="input-group">
-                <label class="input-label">Confirm Password</label>
-                <input type="password" id="passwordConfirm" class="input" required>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:8px;">Create Account</button>
-        </form>
+
+            <div id="errorMsg" class="alert-error"></div>
+
+            <form id="registerForm">
+                <div class="input-group">
+                    <label class="input-label">Full Name</label>
+                    <input type="text" id="name" class="input" required autofocus autocomplete="name">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Email address</label>
+                    <input type="email" id="email" class="input" required autocomplete="email">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Organization Name <span style="font-weight:400;color:#94A3B8;">(optional)</span></label>
+                    <input type="text" id="org_name" class="input" autocomplete="organization">
+                </div>
+                <div class="input-group">
+                    <label class="input-label" style="display:flex; justify-content:space-between;">
+                        Password
+                        <span id="passwordStrength" style="font-size:12px; font-weight:500;"></span>
+                    </label>
+                    <input type="password" id="password" class="input" required minlength="8" autocomplete="new-password">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Confirm Password</label>
+                    <input type="password" id="passwordConfirm" class="input" required autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:8px;">Create Account</button>
+            </form>
+        </div>
+
         <div class="auth-footer">
             Already have an account? <a href="/login.html">Sign in</a>
         </div>
     </div>
+
     <script src="/js/api.js"></script>
     <script src="/js/auth.js"></script>
 </body>
