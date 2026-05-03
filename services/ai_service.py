@@ -1,42 +1,87 @@
 ﻿import json
+import re
 import httpx
 from fastapi import HTTPException
 from config import settings
 from utils.helpers import decrypt_secret
 
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+GEMINI_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-latest",
+]
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 async def get_gemini_api_key(db, user_id: str) -> str:
     creds = await db.user_settings.find_one({"user_id": user_id})
     if creds and creds.get("gemini_api_key"):
-        return decrypt_secret(creds["gemini_api_key"], settings.ENCRYPTION_KEY)
+        try:
+            return decrypt_secret(creds["gemini_api_key"], settings.ENCRYPTION_KEY)
+        except Exception:
+            pass
     if settings.GEMINI_API_KEY:
         return settings.GEMINI_API_KEY
-    raise HTTPException(status_code=400, detail="No Gemini API key configured. Add one in Settings.")
+    raise HTTPException(status_code=400, detail="No Gemini API key configured. Add one in Settings → AI Settings.")
 
 def parse_json_from_response(text: str) -> dict:
     text = text.strip()
-    if text.startswith("```json"):
-        text = text[7:]
-    if text.startswith("```"):
-        text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
+    # Strip markdown code fences
+    text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r'\s*```\s*$', '', text, flags=re.MULTILINE)
+    text = text.strip()
+
+    # Try direct parse
     try:
-        return json.loads(text.strip())
+        return json.loads(text)
     except json.JSONDecodeError:
-        raise ValueError("Failed to parse valid JSON from AI response")
+        pass
+
+    # Try extracting first JSON object from the text
+    match = re.search(r'\{[\s\S]*\}', text)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+
+    raise HTTPException(status_code=502, detail="AI returned an unexpected response format. Please try again.")
 
 async def _call_gemini(api_key: str, prompt: str) -> str:
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
     }
-    async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.post(f"{GEMINI_URL}?key={api_key}", json=payload)
-        r.raise_for_status()
-        data = r.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+    last_error = None
+    async with httpx.AsyncClient(timeout=45) as client:
+        for model in GEMINI_MODELS:
+            url = f"{GEMINI_BASE}/{model}:generateContent?key={api_key}"
+            try:
+                r = await client.post(url, json=payload)
+                if r.status_code == 404:
+                    continue  # model not available, try next
+                if r.status_code == 400:
+                    detail = r.json().get("error", {}).get("message", "Invalid request")
+                    raise HTTPException(status_code=400, detail=f"Gemini API error: {detail}")
+                if r.status_code == 401 or r.status_code == 403:
+                    raise HTTPException(status_code=400, detail="Invalid Gemini API key. Check Settings → AI Settings.")
+                if r.status_code == 429:
+                    raise HTTPException(status_code=429, detail="Gemini API quota exceeded. Try again later.")
+                r.raise_for_status()
+                data = r.json()
+                # Extract text from response
+                try:
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                except (KeyError, IndexError, TypeError):
+                    raise HTTPException(status_code=502, detail="Unexpected response from Gemini API.")
+            except HTTPException:
+                raise
+            except httpx.TimeoutException:
+                raise HTTPException(status_code=504, detail="Gemini API timed out. Please try again.")
+            except httpx.RequestError as e:
+                last_error = str(e)
+                continue
+
+    raise HTTPException(status_code=502, detail=f"Could not reach Gemini API: {last_error}")
 
 async def compose_email(
     db, user_id: str,
@@ -82,10 +127,8 @@ html_body must be complete HTML with inline CSS."""
 
     text = await _call_gemini(api_key, prompt)
     data = parse_json_from_response(text)
-    for k in ["subject", "html_body", "plain_text", "preview_text", "word_count", "estimated_read_seconds"]:
-        if k not in data:
-            data[k] = ""
-    return data
+    defaults = {"subject": "", "html_body": "", "plain_text": "", "preview_text": "", "word_count": 0, "estimated_read_seconds": 0}
+    return {**defaults, **data}
 
 async def improve_email(
     db, user_id: str,
@@ -118,7 +161,5 @@ html_body must be complete HTML with inline CSS."""
 
     text = await _call_gemini(api_key, prompt)
     data = parse_json_from_response(text)
-    for k in ["subject", "html_body", "plain_text", "preview_text", "word_count", "estimated_read_seconds"]:
-        if k not in data:
-            data[k] = ""
-    return data
+    defaults = {"subject": "", "html_body": "", "plain_text": "", "preview_text": "", "word_count": 0, "estimated_read_seconds": 0}
+    return {**defaults, **data}
