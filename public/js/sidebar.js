@@ -143,19 +143,6 @@
       }
     }
 
-    // Guide link — inject before Settings if not already present
-    if (nav && !nav.querySelector('[data-guide-link]')) {
-      const settingsLink = [...nav.querySelectorAll('a')].find(a => a.href.includes('settings'));
-      if (settingsLink) {
-        const guideLink = document.createElement('a');
-        guideLink.href = '/pages/guide.html';
-        guideLink.className = 'sidebar-nav-item' + (window.location.pathname.includes('guide') ? ' active' : '');
-        guideLink.setAttribute('data-guide-link', '1');
-        guideLink.textContent = '📖 User Guide';
-        settingsLink.parentNode.insertBefore(guideLink, settingsLink);
-      }
-    }
-
     // About link — inject after Profile if not already present
     if (nav && !nav.querySelector('[data-about-link]')) {
       const profileLink = [...nav.querySelectorAll('a')].find(a => a.href.includes('profile'));
