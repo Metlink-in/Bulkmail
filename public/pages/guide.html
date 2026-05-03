@@ -36,7 +36,7 @@
         @media (max-width: 600px) { .toc-grid { grid-template-columns: 1fr; } .guide-hero { padding: 28px 20px; } .guide-hero h1 { font-size: 24px; } }
 
         .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } .two-col[style*="grid-template-columns"] { grid-template-columns: 1fr !important; } }
 
         .feature-pill { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; font-size: 13px; }
         .feature-pill strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--text-primary); }
@@ -228,28 +228,78 @@
 
         <!-- 5. Custom Outreach -->
         <div class="card guide-section section-anchor" id="custom-outreach">
-            <div class="guide-section-title"><span class="guide-section-icon">🎯</span> 5. Custom Outreach</div>
-            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Send hyper-personalized one-off emails with custom name &amp; company data — no contact list needed.</p>
+            <div class="guide-section-title"><span class="guide-section-icon">🎯</span> 5. Custom Outreach Campaigns</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Send hyper-personalized one-to-one emails to a fresh list — no pre-saved contact list needed. Every email is unique to its recipient.</p>
 
-            <div class="two-col" style="margin-bottom:16px;">
-                <div class="feature-pill">
-                    <strong>📋 Paste or Upload CSV</strong>
-                    <span>Include columns: email, first_name, last_name, company. Auto-detected from headers.</span>
-                </div>
-                <div class="feature-pill">
-                    <strong>✍️ Compose with Merge Tags</strong>
-                    <span>Click merge tag chips to insert them at cursor. Preview resolves them live for any recipient.</span>
-                </div>
-                <div class="feature-pill">
-                    <strong>👁️ Live Preview</strong>
-                    <span>Pick any recipient from the dropdown and see exactly how their email will look before sending.</span>
-                </div>
-                <div class="feature-pill">
-                    <strong>📊 Track Progress</strong>
-                    <span>Real-time progress bar, sent/failed counts, current recipient, and next-send countdown.</span>
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>Go to Custom Outreach</h4>
+                    <p>Click <strong>Custom Outreach</strong> in the sidebar. This page lets you compose one email and send it to many people, each with their own personalized details.</p>
                 </div>
             </div>
-            <div class="info-box">💡 <strong>When to use Custom Outreach vs Bulk Mail:</strong> Use Custom Outreach when you have a fresh list with names &amp; companies (e.g. LinkedIn exports, Apollo.io exports). Use Bulk Mail for your saved contact lists and recurring campaigns.</div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Add Your Recipients</h4>
+                    <p>Paste a CSV or upload a file. Required column: <strong>email</strong>. Recommended columns for personalization:</p>
+                    <p style="margin-top:8px; font-family:monospace; background:var(--bg-secondary); padding:8px 10px; border-radius:6px; font-size:12px;">email, first_name, last_name, company, custom_1, custom_2</p>
+                    <p style="margin-top:6px;">Headers are auto-detected — column names are case-insensitive. Works with LinkedIn exports, Apollo.io exports, Google Sheets, etc.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>Write Your Email with Merge Tags</h4>
+                    <p>Type your subject and body. Click the merge tag chips to insert personalization at the cursor position:</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+                        <span class="tag-example">{first_name}</span>
+                        <span class="tag-example">{last_name}</span>
+                        <span class="tag-example">{company}</span>
+                        <span class="tag-example">{email}</span>
+                        <span class="tag-example">{custom_1}</span>
+                        <span class="tag-example">{custom_2}</span>
+                        <span class="tag-example">{sender_name}</span>
+                        <span class="tag-example">{sender_email}</span>
+                    </div>
+                    <p style="margin-top:8px;">Example subject: <em>"Quick idea for <span class="tag-example">{first_name}</span> at <span class="tag-example">{company}</span>"</em></p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">4</div>
+                <div class="step-content">
+                    <h4>Preview Before Sending</h4>
+                    <p>Use the <strong>Preview</strong> tab — pick any recipient from the dropdown to see exactly how their personalized email looks. Colors, layout, and all merge tags are resolved live.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">5</div>
+                <div class="step-content">
+                    <h4>Configure &amp; Launch</h4>
+                    <p>Choose your <strong>Sender Profile</strong>, set a <strong>delay</strong> between emails (60–300 seconds recommended), and click <strong>Launch Campaign</strong>. A live progress bar tracks sent / failed counts and next send time.</p>
+                </div>
+            </div>
+
+            <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="feature-pill">
+                    <strong>👁️ Live Preview per Recipient</strong>
+                    <span>Pick any person from the dropdown to see exactly their email before launch.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>📊 Real-time Progress</strong>
+                    <span>Sent/failed counts, current recipient name, and countdown to next send.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>⏸️ Pause &amp; Resume</strong>
+                    <span>Pause mid-campaign and resume from where you left off without losing progress.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>🔁 No Duplicates</strong>
+                    <span>Duplicate email addresses in your CSV are automatically skipped.</span>
+                </div>
+            </div>
+            <div class="info-box" style="margin-top:16px;">💡 <strong>Custom Outreach vs Bulk Mail:</strong> Use <strong>Custom Outreach</strong> when you have a fresh export (LinkedIn, Apollo.io, etc.) with names and company data and want a one-time personalized blast. Use <strong>Bulk Mail</strong> for saved contact lists, recurring campaigns, and scheduled sends.</div>
+            <div class="warn-box">⚠️ If a merge tag has no value (e.g. <span class="tag-example">{company}</span> is blank), the app automatically removes dangling words like "at" or "for" from the sentence — so your email still reads naturally.</div>
         </div>
 
         <!-- 6. Schedules -->

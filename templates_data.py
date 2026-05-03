@@ -18,20 +18,20 @@ GLOBAL_TEMPLATES = [
         "html_body": """<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:20px 0;background:#f4f7fb;font-family:Arial,sans-serif;">
-<table align="center" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.10);">
+<body style="margin:0;padding:20px 0;background-color:#f4f7fb;font-family:Arial,sans-serif;">
+<table align="center" width="600" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:600px;width:100%;background-color:#ffffff;">
 
   <!-- HEADER -->
   <tr>
     <td bgcolor="#4A00E0" style="background-color:#4A00E0;background:linear-gradient(135deg,#4A00E0 0%,#8E2DE2 100%);padding:36px 40px;text-align:center;">
-      <h1 style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Metlink</h1>
+      <h1 style="margin:0;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">Metlink</h1>
       <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.80);letter-spacing:0.5px;">Smart Solutions. Real Growth.</p>
     </td>
   </tr>
 
   <!-- BODY -->
   <tr>
-    <td style="padding:36px 40px;">
+    <td bgcolor="#ffffff" style="background-color:#ffffff;padding:36px 40px;">
       <h2 style="margin:0 0 20px;font-size:22px;color:#4A00E0;font-weight:700;">Let's Help You Scale Faster 🚀</h2>
 
       <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#1f2937;">Hi <strong>{first_name}</strong>,</p>
@@ -44,10 +44,10 @@ GLOBAL_TEMPLATES = [
         At <strong>Metlink</strong>, we help businesses streamline operations, automate workflows, and unlock scalable growth using modern tech and AI-driven systems.
       </p>
 
-      <!-- HIGHLIGHT BOX -->
+      <!-- HIGHLIGHT BOX — bgcolor required; Gmail strips background: shorthand from <td> -->
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
         <tr>
-          <td style="background:#f3f0ff;border-left:4px solid #8E2DE2;border-radius:0 8px 8px 0;padding:18px 20px;">
+          <td bgcolor="#f3f0ff" style="background-color:#f3f0ff;border-left:4px solid #8E2DE2;padding:18px 20px;">
             <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#4A00E0;">⚡ What we can help with:</p>
             <p style="margin:0 0 6px;font-size:14px;color:#374151;line-height:1.6;">• Automation &amp; AI integration</p>
             <p style="margin:0 0 6px;font-size:14px;color:#374151;line-height:1.6;">• Custom web &amp; backend systems</p>
@@ -60,25 +60,25 @@ GLOBAL_TEMPLATES = [
         Would you be open to a quick 15-minute chat to explore if this aligns with your current goals?
       </p>
 
-      <!-- CTA -->
+      <!-- CTA — solid background-color only; Gmail strips linear-gradient from <a> tags -->
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background-color:#4A00E0;background:linear-gradient(135deg,#4A00E0,#8E2DE2);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Book a Quick Call →</a>
+            <a href="#" style="display:inline-block;background-color:#4A00E0;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Book a Quick Call →</a>
           </td>
         </tr>
       </table>
 
       <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;">
         Looking forward to connecting,<br>
-        <strong style="color:#1f2937;">Metlink Team</strong>
+        <strong style="color:#1f2937;">{sender_name}</strong>
       </p>
     </td>
   </tr>
 
   <!-- FOOTER -->
   <tr>
-    <td style="background:#f9f5ff;padding:16px 40px;text-align:center;border-top:1px solid #ede9fe;">
+    <td bgcolor="#f9f5ff" style="background-color:#f9f5ff;padding:16px 40px;text-align:center;border-top:1px solid #ede9fe;">
       <p style="margin:0;font-size:12px;color:#9ca3af;">© 2026 Metlink · All rights reserved</p>
       <p style="margin:4px 0 0;font-size:12px;"><a href="#" style="color:#8E2DE2;text-decoration:none;">Unsubscribe</a></p>
     </td>
