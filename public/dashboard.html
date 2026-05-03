@@ -74,11 +74,80 @@
         </main>
     </div>
 
+    <!-- Onboarding Guide Overlay -->
+    <div id="onboardingOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:var(--bg-primary); border-radius:16px; width:100%; max-width:520px; padding:0; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,0.3); margin:16px;">
+            <!-- Progress bar -->
+            <div style="height:4px; background:var(--border);">
+                <div id="obProgress" style="height:100%; background:var(--primary); transition:width 0.3s; width:16.6%"></div>
+            </div>
+            <div style="padding:32px;">
+                <div id="obStepIndicator" style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:12px;">Step 1 of 6</div>
+                <div id="obIcon" style="font-size:48px; margin-bottom:16px;">👋</div>
+                <h2 id="obTitle" style="font-size:22px; font-weight:800; margin-bottom:10px; color:var(--text-primary);">Welcome to BulkReach Pro!</h2>
+                <p id="obBody" style="font-size:15px; color:var(--text-secondary); line-height:1.6; margin-bottom:0;"></p>
+            </div>
+            <div style="padding:20px 32px; background:var(--bg-secondary); display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border);">
+                <button id="obSkipBtn" onclick="skipOnboarding()" style="background:none; border:none; color:var(--text-muted); font-size:13px; cursor:pointer; padding:0;">Skip tour</button>
+                <div style="display:flex; gap:10px;">
+                    <button id="obPrevBtn" onclick="obStep(-1)" class="btn btn-secondary btn-sm" style="display:none;">← Back</button>
+                    <button id="obNextBtn" onclick="obStep(1)" class="btn btn-primary">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/api.js"></script>
     <script src="/js/sidebar.js"></script>
     <script>
         requireAuth();
-        
+
+        /* ── Onboarding Guide ─────────────────────────────── */
+        const OB_KEY = 'bulkreach_onboarding_done';
+        const OB_STEPS = [
+            { icon:'👋', title:'Welcome to BulkReach Pro!',        body:'This quick tour shows you everything you need to send your first personalized email campaign. It only takes 2 minutes.' },
+            { icon:'📧', title:'Step 1 — Add Your Email Account',   body:'Go to <strong>Settings → Sender Profiles</strong> and add your SMTP credentials (Gmail, Outlook, or any SMTP provider). This is how BulkReach sends emails on your behalf.' },
+            { icon:'👥', title:'Step 2 — Import Your Contacts',     body:'Go to <strong>Contacts</strong> and upload a CSV file with columns: <code>email, name, company</code>. Or paste emails manually. Your contacts are stored privately per account.' },
+            { icon:'✉️', title:'Step 3 — Pick or Write a Template', body:'Go to <strong>Templates</strong> to choose from 9 professionally designed email templates, or write your own. Use merge tags like <code>{first_name}</code> and <code>{company}</code> to personalize each email.' },
+            { icon:'🚀', title:'Step 4 — Send a Campaign',          body:'Go to <strong>Bulk Mail</strong>, choose a contact list and template, set a delay between sends, and launch. Each email is sent individually, not as a group blast.' },
+            { icon:'🎯', title:'You\'re All Set!',                   body:'Track results in <strong>History</strong>, monitor replies in <strong>Replies</strong>, and explore <strong>Custom Outreach</strong> for personalized one-off campaigns. Need help? Visit the <a href="/pages/guide.html" style="color:var(--primary)">User Guide</a>.' },
+        ];
+        let obCurrent = 0;
+
+        function renderObStep() {
+            const s = OB_STEPS[obCurrent];
+            document.getElementById('obIcon').textContent          = s.icon;
+            document.getElementById('obTitle').textContent         = s.title;
+            document.getElementById('obBody').innerHTML            = s.body;
+            document.getElementById('obStepIndicator').textContent = `Step ${obCurrent + 1} of ${OB_STEPS.length}`;
+            document.getElementById('obProgress').style.width      = `${((obCurrent + 1) / OB_STEPS.length) * 100}%`;
+            document.getElementById('obPrevBtn').style.display     = obCurrent > 0 ? 'inline-flex' : 'none';
+            const nextBtn = document.getElementById('obNextBtn');
+            if (obCurrent === OB_STEPS.length - 1) {
+                nextBtn.textContent = 'Get Started!';
+                nextBtn.onclick = skipOnboarding;
+            } else {
+                nextBtn.textContent = 'Next →';
+                nextBtn.onclick = () => obStep(1);
+            }
+        }
+
+        function obStep(delta) {
+            obCurrent = Math.max(0, Math.min(OB_STEPS.length - 1, obCurrent + delta));
+            renderObStep();
+        }
+
+        function skipOnboarding() {
+            localStorage.setItem(OB_KEY, '1');
+            document.getElementById('onboardingOverlay').style.display = 'none';
+        }
+
+        function maybeShowOnboarding() {
+            if (localStorage.getItem(OB_KEY)) return;
+            renderObStep();
+            document.getElementById('onboardingOverlay').style.display = 'flex';
+        }
+
         async function loadDashboard() {
             try {
                 const me = await api.get('/auth/me');
@@ -139,6 +208,7 @@
         }
         
         loadDashboard();
+        maybeShowOnboarding();
     </script>
 </body>
 </html>

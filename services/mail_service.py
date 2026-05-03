@@ -80,15 +80,21 @@ async def build_email_message(
         alt_part = msg
     
     # Replace tokens
+    _first = personalization_data.get("first_name", to_name or "").split(" ")[0]
+    _last  = personalization_data.get("last_name", "")
+    _company = personalization_data.get("company", "")
     tokens = {
-        "{first_name}": personalization_data.get("first_name", to_name or "").split(" ")[0],
-        "{last_name}": personalization_data.get("last_name", ""),
-        "{company}": personalization_data.get("company", ""),
-        "{custom_1}": personalization_data.get("custom_1", ""),
-        "{custom_2}": personalization_data.get("custom_2", ""),
-        "{custom_3}": personalization_data.get("custom_3", ""),
-        "{custom_4}": personalization_data.get("custom_4", ""),
-        "{custom_5}": personalization_data.get("custom_5", "")
+        "{first_name}": _first,
+        "{last_name}":  _last,
+        "{full_name}":  f"{_first} {_last}".strip() or _first,
+        "{company}":    _company,
+        "{org}":        _company,
+        "{email}":      personalization_data.get("email", to_email),
+        "{custom_1}":   personalization_data.get("custom_1", ""),
+        "{custom_2}":   personalization_data.get("custom_2", ""),
+        "{custom_3}":   personalization_data.get("custom_3", ""),
+        "{custom_4}":   personalization_data.get("custom_4", ""),
+        "{custom_5}":   personalization_data.get("custom_5", ""),
     }
     
     s_sub = subject
@@ -467,7 +473,14 @@ async def tick_mail_job(db, user_id: str, job_id: str) -> dict:
 
     from_email = smtp_settings.get("smtp_user", "")
     domain = from_email.split("@")[-1] if "@" in from_email else "bulkreach.local"
-    personalization_data = {**next_contact.get("custom_fields", {}), "first_name": next_contact.get("name", ""), "company": next_contact.get("org", "")}
+    _contact_name = next_contact.get("name") or next_contact["email"].split("@")[0]
+    _contact_org  = next_contact.get("org") or ""
+    personalization_data = {
+        **next_contact.get("custom_fields", {}),
+        "first_name": _contact_name,
+        "company":    _contact_org,
+        "email":      next_contact["email"],
+    }
 
     msg = await build_email_message(
         to_email=next_contact["email"],
@@ -510,3 +523,137 @@ async def tick_mail_job(db, user_id: str, job_id: str) -> dict:
     await db.mail_jobs.update_one({"_id": job_id}, {"$set": update})
 
     return await get_job_status(db, user_id, job_id)
+
+
+# ── Custom Outreach (inline recipients, no template) ──────────────────────────
+
+async def _outreach_status(db, job_id: str, job: dict) -> dict:
+    sent   = await db.mail_logs.count_documents({"job_id": job_id, "status": "sent"})
+    failed = await db.mail_logs.count_documents({"job_id": job_id, "status": "failed"})
+    total  = len(job.get("inline_recipients", []))
+    pct    = round((sent + failed) / total * 100, 1) if total > 0 else 0
+    return {
+        "status":            job.get("status"),
+        "sent_count":        sent,
+        "failed_count":      failed,
+        "total_count":       total,
+        "current_recipient": job.get("current_recipient"),
+        "progress_pct":      pct,
+        "next_send_at":      job.get("next_send_at"),
+    }
+
+
+async def tick_outreach_job(db, user_id: str, job_id: str) -> dict:
+    """Serverless-compatible single-step processor for Custom Outreach jobs."""
+    from utils.helpers import get_current_timestamp
+
+    job = await db.mail_jobs.find_one({"_id": job_id, "user_id": user_id})
+    if not job:
+        return {}
+
+    status = job.get("status")
+    if status == "queued":
+        now = get_current_timestamp()
+        await db.mail_jobs.update_one(
+            {"_id": job_id},
+            {"$set": {"status": "running", "next_send_at": now, "updated_at": now}}
+        )
+        job = await db.mail_jobs.find_one({"_id": job_id})
+        status = "running"
+
+    if status != "running":
+        return await _outreach_status(db, job_id, job)
+
+    now = get_current_timestamp()
+    next_send_at = job.get("next_send_at")
+    if next_send_at:
+        if hasattr(next_send_at, "tzinfo") and next_send_at.tzinfo is None:
+            next_send_at = next_send_at.replace(tzinfo=timezone.utc)
+        if next_send_at > now:
+            return await _outreach_status(db, job_id, job)
+
+    smtp_settings = await get_user_smtp_settings(db, user_id, job.get("sender_profile_id"))
+    if not smtp_settings:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "failed", "error": "SMTP not configured", "updated_at": now}})
+        return await _outreach_status(db, job_id, await db.mail_jobs.find_one({"_id": job_id}))
+
+    recipients = job.get("inline_recipients", [])
+    if not recipients:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "completed", "completed_at": now}})
+        return await _outreach_status(db, job_id, await db.mail_jobs.find_one({"_id": job_id}))
+
+    logs = await db.mail_logs.find({"job_id": job_id}).to_list(None)
+    processed_emails = {log["email"] for log in logs}
+
+    next_r = next((r for r in recipients if r["email"] not in processed_emails), None)
+    if not next_r:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "completed", "completed_at": now}})
+        return await _outreach_status(db, job_id, await db.mail_jobs.find_one({"_id": job_id}))
+
+    start_of_day = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    daily_limit  = job.get("daily_limit") or smtp_settings.get("daily_send_limit") or 500
+    today_sent   = await db.mail_logs.count_documents({"user_id": user_id, "status": "sent", "sent_at": {"$gte": start_of_day}})
+    if today_sent >= daily_limit:
+        await db.mail_jobs.update_one({"_id": job_id}, {"$set": {"status": "paused", "updated_at": now}})
+        return await _outreach_status(db, job_id, await db.mail_jobs.find_one({"_id": job_id}))
+
+    delay_seconds = max(MIN_DELAY_SECONDS, job.get("interval_seconds") or smtp_settings.get("email_delay_seconds") or DEFAULT_DELAY_SECONDS)
+    from_email    = smtp_settings.get("smtp_user", "")
+    domain        = from_email.split("@")[-1] if "@" in from_email else "bulkreach.local"
+
+    first_name = next_r.get("first_name", "") or next_r["email"].split("@")[0]
+    last_name  = next_r.get("last_name", "")
+    company    = next_r.get("company", "")
+    full_name  = f"{first_name} {last_name}".strip()
+
+    personalization_data = {
+        "first_name": first_name,
+        "last_name":  last_name,
+        "full_name":  full_name,
+        "company":    company,
+        "email":      next_r["email"],
+        "custom_1":   next_r.get("custom_1", ""),
+        "custom_2":   next_r.get("custom_2", ""),
+        "custom_3":   next_r.get("custom_3", ""),
+    }
+
+    msg = await build_email_message(
+        to_email=next_r["email"],
+        to_name=full_name or first_name,
+        subject=job["subject"],
+        html_body=job["html_body"],
+        from_name=smtp_settings.get("from_name", ""),
+        from_email=from_email,
+        reply_to=smtp_settings.get("reply_to_email", ""),
+        message_id_domain=domain,
+        personalization_data=personalization_data,
+        attachments=[],
+    )
+
+    res = await send_single_email(smtp_settings, msg, next_r["email"])
+
+    await db.mail_logs.insert_one({
+        "_id":           str(uuid.uuid4()),
+        "user_id":       user_id,
+        "job_id":        job_id,
+        "contact_id":    next_r["email"],
+        "email":         next_r["email"],
+        "sent_at":       now,
+        "status":        "sent" if res["success"] else "failed",
+        "error_message": res.get("error"),
+        "message_id":    res.get("message_id"),
+    })
+
+    done  = await db.mail_logs.count_documents({"job_id": job_id})
+    total = len(recipients)
+    update = {
+        "next_send_at":      now + timedelta(seconds=delay_seconds),
+        "current_recipient": next_r["email"],
+        "updated_at":        now,
+    }
+    if done >= total:
+        update["status"]       = "completed"
+        update["completed_at"] = now
+
+    await db.mail_jobs.update_one({"_id": job_id}, {"$set": update})
+    return await _outreach_status(db, job_id, await db.mail_jobs.find_one({"_id": job_id}))

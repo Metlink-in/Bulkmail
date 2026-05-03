@@ -323,8 +323,23 @@
                     <div class="progress-bar-container">
                         <div id="jobProgressBar" class="progress-bar-fill"></div>
                     </div>
-                    
-                    <div style="margin-top:24px;">
+
+                    <!-- Completion / failure banner — hidden until job ends -->
+                    <div id="campaignDoneBanner" style="display:none; margin-top:20px; border-radius:var(--radius-md); padding:20px 24px;">
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <div id="doneBannerIcon" style="font-size:36px; line-height:1; flex-shrink:0;">✅</div>
+                            <div>
+                                <div id="doneBannerTitle" style="font-size:17px; font-weight:700; margin-bottom:4px;">Campaign Sent Successfully!</div>
+                                <div id="doneBannerBody" style="font-size:13px; opacity:0.85;"></div>
+                            </div>
+                        </div>
+                        <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+                            <a href="/pages/history.html" class="btn btn-sm" id="doneBannerHistoryBtn">View in History</a>
+                            <button class="btn btn-sm" id="doneBannerNewBtn" onclick="startNewCampaign()" style="border:1px solid currentColor; background:transparent;">Start New Campaign</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:24px;" id="logFeedSection">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                             <label class="input-label">Live Activity Feed</label>
                             <div class="badge badge-success" id="liveBadge" style="animation: pulse 2s infinite">LIVE</div>
@@ -729,12 +744,10 @@
                         if(secsLeft > 0) document.getElementById('currentRecipient').textContent += ` · next in ${secsLeft}s`;
                     }
 
-                    if(status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
+                    if(status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled' || status.status === 'paused') {
                         clearInterval(jobPollInterval);
                         jobPollInterval = null;
-                        document.getElementById('liveBadge').style.animation = 'none';
-                        document.getElementById('liveBadge').textContent = 'FINISHED';
-                        document.getElementById('liveBadge').className = 'badge badge-neutral';
+                        showCampaignDone(status);
                     }
                 } catch (err) {
                     consecutiveErrors++;
@@ -753,6 +766,105 @@
         window.addEventListener('beforeunload', () => {
             if(jobPollInterval) clearInterval(jobPollInterval);
         });
+
+        function showCampaignDone(status) {
+            // Stop the "LIVE" badge animation
+            const badge = document.getElementById('liveBadge');
+            badge.style.animation = 'none';
+
+            // Hide job control buttons — nothing to pause/resume/cancel
+            document.getElementById('jobControls').style.display = 'none';
+
+            const banner = document.getElementById('campaignDoneBanner');
+            const icon   = document.getElementById('doneBannerIcon');
+            const title  = document.getElementById('doneBannerTitle');
+            const body   = document.getElementById('doneBannerBody');
+            const histBtn = document.getElementById('doneBannerHistoryBtn');
+            const newBtn  = document.getElementById('doneBannerNewBtn');
+
+            const sent   = status.sent_count   ?? 0;
+            const failed = status.failed_count ?? 0;
+            const total  = status.total_count  ?? 0;
+
+            if (status.status === 'completed') {
+                banner.style.background = 'rgba(22,163,74,0.1)';
+                banner.style.border     = '1px solid rgba(22,163,74,0.3)';
+                icon.textContent        = '✅';
+                title.textContent       = 'Campaign Sent Successfully!';
+                title.style.color       = '#16a34a';
+                body.textContent        = `All ${total} emails delivered — ${sent} sent, ${failed} failed.`;
+                badge.textContent       = '✓ DONE';
+                badge.className         = 'badge badge-success';
+                histBtn.style.background = '#16a34a';
+                histBtn.style.color      = '#fff';
+                newBtn.style.color       = '#16a34a';
+                showToast(`Campaign complete! ${sent} emails sent.`, 'success');
+
+            } else if (status.status === 'failed') {
+                banner.style.background = 'rgba(220,38,38,0.08)';
+                banner.style.border     = '1px solid rgba(220,38,38,0.3)';
+                icon.textContent        = '❌';
+                title.textContent       = 'Campaign Failed';
+                title.style.color       = 'var(--danger)';
+                body.textContent        = `Sending stopped after ${sent} sent. Check your SMTP settings and try again.`;
+                badge.textContent       = 'FAILED';
+                badge.className         = 'badge badge-danger';
+                histBtn.style.background = 'var(--danger)';
+                histBtn.style.color      = '#fff';
+                newBtn.style.color       = 'var(--danger)';
+                showToast('Campaign failed. Check SMTP settings.', 'danger');
+
+            } else if (status.status === 'paused') {
+                banner.style.background = 'rgba(217,119,6,0.08)';
+                banner.style.border     = '1px solid rgba(217,119,6,0.3)';
+                icon.textContent        = '⏸️';
+                title.textContent       = 'Daily Limit Reached — Paused';
+                title.style.color       = '#d97706';
+                body.textContent        = `${sent} of ${total} sent today. The campaign will resume automatically tomorrow.`;
+                badge.textContent       = 'PAUSED';
+                badge.className         = 'badge badge-warning';
+                histBtn.style.background = '#d97706';
+                histBtn.style.color      = '#fff';
+                newBtn.style.color       = '#d97706';
+                showToast('Daily limit reached — campaign paused until tomorrow.', 'warning');
+
+            } else {
+                // cancelled
+                banner.style.background = 'rgba(100,116,139,0.08)';
+                banner.style.border     = '1px solid var(--border)';
+                icon.textContent        = '🛑';
+                title.textContent       = 'Campaign Cancelled';
+                title.style.color       = 'var(--text-secondary)';
+                body.textContent        = `Stopped after ${sent} sent out of ${total}.`;
+                badge.textContent       = 'CANCELLED';
+                badge.className         = 'badge badge-neutral';
+                histBtn.style.background = 'var(--bg-secondary)';
+                histBtn.style.color      = 'var(--text-primary)';
+                newBtn.style.color       = 'var(--text-secondary)';
+            }
+
+            banner.style.display = 'block';
+            // Scroll banner into view smoothly
+            setTimeout(() => banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+        }
+
+        function startNewCampaign() {
+            // Reset progress UI for a fresh campaign
+            activeJobId = null;
+            document.getElementById('liveProgress').style.display = 'none';
+            document.getElementById('campaignDoneBanner').style.display = 'none';
+            document.getElementById('jobProgressBar').style.width = '0%';
+            document.getElementById('jobProgressText').textContent = '0%';
+            document.getElementById('jobStats').textContent = '0 sent / 0 total';
+            document.getElementById('jobStatusLabel').textContent = 'Campaign Status: Running';
+            document.getElementById('currentRecipient').textContent = 'Next: ...';
+            document.getElementById('logFeed').innerHTML = '<div class="log-entry">Waiting for job to initialize...</div>';
+            document.getElementById('liveBadge').textContent = 'LIVE';
+            document.getElementById('liveBadge').className = 'badge badge-success';
+            document.getElementById('liveBadge').style.animation = 'pulse 2s infinite';
+            // Scroll back to compose
+            document.querySelector('.tab-btn')?.click();
+        }
 
         // --- JOB CONTROLS ---
         document.getElementById('pauseJobBtn').addEventListener('click', async () => {

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>Custom Outreach - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        /* ── Layout ── */
+        .outreach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 960px) { .outreach-grid { grid-template-columns: 1fr; } }
+
+        /* ── Merge tag chips ── */
+        .tag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .tag-chip {
+            background: rgba(37,99,235,0.1); color: var(--primary);
+            border: 1px solid rgba(37,99,235,0.25); border-radius: 4px;
+            font-size: 12px; font-family: monospace; padding: 2px 8px;
+            cursor: pointer; user-select: none; transition: background 0.15s;
+        }
+        .tag-chip:hover { background: rgba(37,99,235,0.2); }
+
+        /* ── Recipients table ── */
+        .recipients-wrap { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
+        .recipients-wrap table { width: 100%; font-size: 13px; border-collapse: collapse; }
+        .recipients-wrap th, .recipients-wrap td { padding: 7px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+        .recipients-wrap th { background: var(--bg-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); position: sticky; top: 0; }
+        .recipients-wrap tr:last-child td { border-bottom: none; }
+        .recipients-wrap tr:hover td { background: var(--bg-secondary); }
+
+        /* ── Import box ── */
+        .import-area { background: var(--bg-secondary); border: 2px dashed var(--border); border-radius: var(--radius-md); padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+        .import-area:hover, .import-area.drag-over { border-color: var(--primary); }
+        .import-area input[type="file"] { display: none; }
+
+        /* ── Preview iframe ── */
+        .preview-iframe { width: 100%; height: 380px; border: 1px solid var(--border); border-radius: var(--radius-md); background: #fff; }
+
+        /* ── Progress bar ── */
+        .progress-bar-track { background: var(--border); border-radius: 99px; height: 8px; overflow: hidden; }
+        .progress-bar-fill { background: var(--primary); height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+
+        /* ── Step badges ── */
+        .step-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+
+        /* ── Misc ── */
+        .section-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .body-textarea { width: 100%; min-height: 240px; font-family: monospace; font-size: 13px; resize: vertical; }
+        .stat-row { display: flex; gap: 24px; font-size: 14px; }
+        .stat-row span { color: var(--text-muted); }
+        .stat-row strong { color: var(--text-primary); font-size: 20px; }
+    </style>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-logo">BulkReach Pro</div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html"        class="sidebar-nav-item">Dashboard</a>
+            <a href="/pages/bulk-mail.html"  class="sidebar-nav-item">Bulk Mail</a>
+            <a href="/pages/custom-outreach.html" class="sidebar-nav-item active" data-outreach-link="1">Custom Outreach</a>
+            <a href="/pages/history.html"    class="sidebar-nav-item">History</a>
+            <a href="/pages/templates.html"  class="sidebar-nav-item">Templates</a>
+            <a href="/pages/contacts.html"   class="sidebar-nav-item">Contacts</a>
+            <a href="/pages/schedule.html"   class="sidebar-nav-item">Schedules</a>
+            <a href="/pages/replies.html"    class="sidebar-nav-item">Replies</a>
+            <a href="/pages/settings.html"   class="sidebar-nav-item">Settings</a>
+            <a href="/pages/profile.html"    class="sidebar-nav-item">Profile</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="page-header">
+            <h1 class="page-title">Custom Outreach</h1>
+            <p style="color:var(--text-secondary);font-size:13px;margin-top:2px;">Import your list with names &amp; companies, compose a personalized email, send to each recipient individually.</p>
+        </header>
+
+        <!-- ── STEP 1: Recipients ───────────────────────────────────── -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="section-title"><span class="step-badge">1</span> Import Recipients</div>
+
+            <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="showPasteArea()">Paste CSV / TSV</button>
+                <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+                    Upload .csv <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" onchange="handleFileUpload(event)">
+                </label>
+                <button class="btn btn-ghost btn-sm" onclick="loadSampleData()">Try Sample Data</button>
+                <button class="btn btn-ghost btn-sm" style="margin-left:auto; color:var(--danger)" onclick="clearRecipients()" id="clearBtn" style="display:none;">Clear All</button>
+            </div>
+
+            <!-- CSV paste area -->
+            <div id="pasteArea" style="display:none; margin-bottom:16px;">
+                <label class="input-label">Paste your CSV here (first row = headers)</label>
+                <textarea id="csvPasteBox" class="input body-textarea" style="min-height:120px; font-family:monospace; font-size:12px;"
+                    placeholder="email,first_name,last_name,company&#10;john@acme.com,John,Doe,Acme Corp&#10;jane@beta.io,Jane,Smith,Beta Inc"></textarea>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button class="btn btn-primary btn-sm" onclick="parsePasted()">Import</button>
+                    <button class="btn btn-ghost btn-sm" onclick="hidePasteArea()">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Column hint -->
+            <div id="colHint" class="hint" style="margin-bottom:12px; display:none;">
+                Auto-detected columns: <strong id="colHintText"></strong>
+            </div>
+
+            <!-- Recipients table -->
+            <div id="recipientsTable" style="display:none; margin-bottom:12px;">
+                <div class="recipients-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Email</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Company</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="recipientsTbody"></tbody>
+                    </table>
+                </div>
+                <div style="font-size:13px; color:var(--text-secondary); margin-top:8px;" id="recipientCount"></div>
+            </div>
+
+            <div id="emptyState" style="text-align:center; padding:24px; color:var(--text-muted); font-size:14px;">
+                No recipients yet. Paste CSV, upload a file, or try sample data above.
+            </div>
+        </div>
+
+        <!-- ── STEP 2: Compose ──────────────────────────────────────── -->
+        <div class="outreach-grid" style="margin-bottom:20px;">
+            <div class="card">
+                <div class="section-title"><span class="step-badge">2</span> Compose Email</div>
+
+                <div class="input-group">
+                    <label class="input-label">Subject *</label>
+                    <input type="text" id="subject" class="input" placeholder="Hi {first_name}, quick question about {company}…">
+                </div>
+
+                <div style="margin-bottom:8px;">
+                    <label class="input-label" style="margin-bottom:6px;">Merge Tags — click to insert at cursor</label>
+                    <div class="tag-chips">
+                        <span class="tag-chip" onclick="insertTag('{first_name}')">{first_name}</span>
+                        <span class="tag-chip" onclick="insertTag('{last_name}')">{last_name}</span>
+                        <span class="tag-chip" onclick="insertTag('{full_name}')">{full_name}</span>
+                        <span class="tag-chip" onclick="insertTag('{company}')">{company}</span>
+                        <span class="tag-chip" onclick="insertTag('{email}')">{email}</span>
+                        <span class="tag-chip" onclick="insertTag('{custom_1}')">{custom_1}</span>
+                        <span class="tag-chip" onclick="insertTag('{custom_2}')">{custom_2}</span>
+                        <span class="tag-chip" onclick="insertTag('{custom_3}')">{custom_3}</span>
+                    </div>
+                </div>
+
+                <div class="input-group" style="margin-bottom:8px;">
+                    <label class="input-label">Email Body (HTML) *</label>
+                    <textarea id="htmlBody" class="input body-textarea" placeholder="<p>Hi {first_name},</p>&#10;<p>I noticed {company} is doing great work in…</p>"></textarea>
+                </div>
+                <div class="hint">You can paste a full HTML email or write plain text. Merge tags are replaced per recipient.</div>
+
+                <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary btn-sm" onclick="loadPreview()">Preview for Recipient #1</button>
+                    <select id="previewRecipientIdx" class="input" style="width:auto; padding:4px 10px; font-size:13px;">
+                        <option value="0">Recipient #1</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="section-title"><span class="step-badge" style="background:var(--text-muted)">↗</span> Preview</div>
+                <div id="previewSubject" style="font-size:13px; color:var(--text-muted); margin-bottom:8px; font-weight:500;">Subject will appear here after preview</div>
+                <iframe id="previewFrame" class="preview-iframe" srcdoc="<p style='color:#888;font-family:sans-serif;padding:20px'>Click &quot;Preview&quot; to see the resolved email for a recipient.</p>" sandbox="allow-same-origin"></iframe>
+            </div>
+        </div>
+
+        <!-- ── STEP 3: Send Settings ───────────────────────────────── -->
+        <div class="card" id="sendCard">
+            <div class="section-title"><span class="step-badge">3</span> Send Settings</div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:20px;" class="send-grid">
+                <div class="input-group" style="margin:0;">
+                    <label class="input-label">Campaign Name</label>
+                    <input type="text" id="campaignName" class="input" placeholder="My Outreach — May 2025">
+                </div>
+                <div class="input-group" style="margin:0;">
+                    <label class="input-label">SMTP Profile</label>
+                    <select id="profileSelect" class="input">
+                        <option value="">Loading profiles…</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin:0;">
+                    <label class="input-label">Delay Between Emails (seconds)</label>
+                    <input type="number" id="delaySeconds" class="input" value="120" min="60" max="3600">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="sendBtn" onclick="startOutreach()">
+                Send Outreach — <span id="sendCount">0</span> Recipients
+            </button>
+            <div id="sendError" style="color:var(--danger); font-size:13px; margin-top:10px; display:none;"></div>
+        </div>
+
+        <!-- ── Progress (hidden until send) ──────────────────────────── -->
+        <div class="card" id="progressCard" style="display:none; margin-top:20px;">
+            <div class="section-title" id="progressTitle">Sending in Progress…</div>
+
+            <div class="stat-row" style="margin-bottom:16px;">
+                <div><strong id="pSent">0</strong><br><span>Sent</span></div>
+                <div><strong id="pFailed">0</strong><br><span>Failed</span></div>
+                <div><strong id="pTotal">0</strong><br><span>Total</span></div>
+                <div><strong id="pPct">0%</strong><br><span>Progress</span></div>
+            </div>
+
+            <div class="progress-bar-track" style="margin-bottom:12px;">
+                <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+            </div>
+
+            <div style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;" id="progressMeta">
+                Current: <span id="pCurrent">—</span> &nbsp;|&nbsp;
+                Status: <span id="pStatus">—</span> &nbsp;|&nbsp;
+                Next send: <span id="pNext">—</span>
+            </div>
+
+            <!-- Done banner — hidden until complete -->
+            <div id="outreachDoneBanner" style="display:none; border-radius:var(--radius-md); padding:20px 24px; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <div id="oDoneIcon" style="font-size:36px; line-height:1; flex-shrink:0;">✅</div>
+                    <div>
+                        <div id="oDoneTitle" style="font-size:17px; font-weight:700; margin-bottom:4px;"></div>
+                        <div id="oDoneBody"  style="font-size:13px; opacity:0.85;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px;" id="progressActions">
+                <button class="btn btn-danger btn-sm" id="cancelOutreachBtn" onclick="cancelOutreach()">Cancel</button>
+                <button class="btn btn-ghost btn-sm" onclick="startNewOutreach()">Start New Outreach</button>
+                <a href="/pages/history.html" class="btn btn-sm btn-secondary" id="viewHistoryBtn" style="display:none;">View in History</a>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<style>
+    @media (max-width: 640px) {
+        .send-grid { grid-template-columns: 1fr !important; }
+    }
+</style>
+
+<script src="/js/api.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+requireAuth();
+
+let recipients = [];
+let activeJobId = null;
+let tickInterval = null;
+let lastFocused = null;   // subject or htmlBody
+
+// Track focus for merge tag insertion
+document.addEventListener('focusin', e => {
+    if (e.target.id === 'subject' || e.target.id === 'htmlBody') {
+        lastFocused = e.target;
+    }
+});
+
+// ── Recipients ──────────────────────────────────────────────────────────────
+
+function showPasteArea() {
+    document.getElementById('pasteArea').style.display = 'block';
+    document.getElementById('csvPasteBox').focus();
+}
+function hidePasteArea() {
+    document.getElementById('pasteArea').style.display = 'none';
+}
+
+function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const text = ev.target.result;
+        const parsed = parseCSV(text);
+        if (parsed.length === 0) return showToast('No valid rows found in file', 'warning');
+        setRecipients(parsed);
+        showToast(`Imported ${parsed.length} recipients from file`, 'success');
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // allow re-upload of same file
+}
+
+function parsePasted() {
+    const text = document.getElementById('csvPasteBox').value.trim();
+    if (!text) return;
+    const parsed = parseCSV(text);
+    if (parsed.length === 0) return showToast('No valid rows found. Make sure first row is headers with an "email" column.', 'warning');
+    setRecipients(parsed);
+    hidePasteArea();
+    showToast(`Imported ${parsed.length} recipients`, 'success');
+}
+
+function parseCSV(text) {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+
+    // Support comma or tab delimiter
+    const delim = lines[0].includes('\t') ? '\t' : ',';
+    const headers = splitLine(lines[0], delim).map(h => h.toLowerCase().trim().replace(/['"]/g, ''));
+
+    const colMap = {
+        email:      findCol(headers, ['email', 'e-mail', 'mail', 'email address']),
+        first_name: findCol(headers, ['first_name', 'firstname', 'first name', 'first', 'name', 'given name']),
+        last_name:  findCol(headers, ['last_name', 'lastname', 'last name', 'last', 'surname', 'family name']),
+        company:    findCol(headers, ['company', 'company name', 'organization', 'organisation', 'org', 'account', 'employer']),
+        custom_1:   findCol(headers, ['custom_1', 'custom1', 'role', 'title', 'position', 'job title']),
+        custom_2:   findCol(headers, ['custom_2', 'custom2', 'phone', 'city', 'location', 'industry']),
+        custom_3:   findCol(headers, ['custom_3', 'custom3']),
+    };
+
+    if (colMap.email < 0) return [];
+
+    // Show detected columns hint
+    const detected = Object.entries(colMap)
+        .filter(([, v]) => v >= 0)
+        .map(([k, v]) => `${k} → col "${headers[v]}"`)
+        .join(', ');
+    document.getElementById('colHintText').textContent = detected;
+    document.getElementById('colHint').style.display = 'block';
+
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        const cols = splitLine(lines[i], delim);
+        const email = getCol(cols, colMap.email);
+        if (!email || !email.includes('@')) continue;
+        result.push({
+            email:      email,
+            first_name: getCol(cols, colMap.first_name),
+            last_name:  getCol(cols, colMap.last_name),
+            company:    getCol(cols, colMap.company),
+            custom_1:   getCol(cols, colMap.custom_1),
+            custom_2:   getCol(cols, colMap.custom_2),
+            custom_3:   getCol(cols, colMap.custom_3),
+        });
+    }
+    return result;
+}
+
+function findCol(headers, aliases) {
+    for (const a of aliases) {
+        const idx = headers.indexOf(a);
+        if (idx >= 0) return idx;
+    }
+    return -1;
+}
+
+function getCol(cols, idx) {
+    if (idx < 0 || idx >= cols.length) return '';
+    return cols[idx].trim().replace(/^["']|["']$/g, '');
+}
+
+function splitLine(line, delim) {
+    const result = [];
+    let field = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; continue; }
+        if (c === delim && !inQ) { result.push(field); field = ''; continue; }
+        field += c;
+    }
+    result.push(field);
+    return result;
+}
+
+function setRecipients(list) {
+    recipients = list;
+    renderRecipientsTable();
+    updateSendCount();
+}
+
+function renderRecipientsTable() {
+    const tbody = document.getElementById('recipientsTbody');
+    tbody.innerHTML = '';
+    recipients.forEach((r, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="color:var(--text-muted)">${i + 1}</td>
+            <td>${esc(r.email)}</td>
+            <td>${esc(r.first_name)}</td>
+            <td>${esc(r.last_name)}</td>
+            <td>${esc(r.company)}</td>
+            <td><button class="btn btn-sm btn-ghost" style="color:var(--danger); padding:2px 6px;" onclick="removeRecipient(${i})">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    const hasAny = recipients.length > 0;
+    document.getElementById('recipientsTable').style.display = hasAny ? 'block' : 'none';
+    document.getElementById('emptyState').style.display = hasAny ? 'none' : 'block';
+    document.getElementById('recipientCount').textContent = `${recipients.length} recipient${recipients.length !== 1 ? 's' : ''}`;
+
+    // Update preview recipient selector
+    const sel = document.getElementById('previewRecipientIdx');
+    sel.innerHTML = recipients.map((r, i) => `<option value="${i}">#${i + 1} — ${esc(r.email)}</option>`).join('');
+}
+
+function removeRecipient(idx) {
+    recipients.splice(idx, 1);
+    renderRecipientsTable();
+    updateSendCount();
+}
+
+function clearRecipients() {
+    recipients = [];
+    renderRecipientsTable();
+    updateSendCount();
+    document.getElementById('colHint').style.display = 'none';
+}
+
+function loadSampleData() {
+    setRecipients([
+        { email: 'sarah@acmecorp.com',  first_name: 'Sarah',  last_name: 'Johnson', company: 'Acme Corp',    custom_1: 'Head of Sales',    custom_2: '', custom_3: '' },
+        { email: 'mike@betaio.com',     first_name: 'Mike',   last_name: 'Chen',    company: 'Beta IO',      custom_1: 'CTO',              custom_2: '', custom_3: '' },
+        { email: 'priya@deltasys.in',   first_name: 'Priya',  last_name: 'Sharma',  company: 'Delta Systems', custom_1: 'Founder',          custom_2: '', custom_3: '' },
+    ]);
+    showToast('Sample data loaded', 'success');
+}
+
+// ── Merge Tags ───────────────────────────────────────────────────────────────
+
+function insertTag(tag) {
+    const el = lastFocused || document.getElementById('htmlBody');
+    if (!el) return;
+    const start = el.selectionStart;
+    const end   = el.selectionEnd;
+    el.value = el.value.substring(0, start) + tag + el.value.substring(end);
+    el.selectionStart = el.selectionEnd = start + tag.length;
+    el.focus();
+}
+
+// ── Preview ──────────────────────────────────────────────────────────────────
+
+async function loadPreview() {
+    const idx = parseInt(document.getElementById('previewRecipientIdx').value) || 0;
+    const r = recipients[idx];
+
+    const subject  = document.getElementById('subject').value;
+    const htmlBody = document.getElementById('htmlBody').value;
+
+    if (!subject && !htmlBody) return showToast('Write a subject and body first', 'warning');
+
+    const previewRecipient = r || { email: 'john@example.com', first_name: 'John', last_name: 'Doe', company: 'Acme Corp', custom_1: '', custom_2: '', custom_3: '' };
+
+    try {
+        const res = await api.post('/outreach/preview', {
+            subject,
+            html_body: htmlBody,
+            recipient: previewRecipient
+        });
+        document.getElementById('previewSubject').textContent = 'Subject: ' + res.subject;
+        const frame = document.getElementById('previewFrame');
+        frame.srcdoc = res.html || '<p style="font-family:sans-serif;padding:20px;color:#888">No HTML content</p>';
+    } catch (err) {
+        showToast('Preview failed: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+
+// ── Profiles ─────────────────────────────────────────────────────────────────
+
+async function loadProfiles() {
+    try {
+        const profiles = await api.get('/settings/profiles');
+        const sel = document.getElementById('profileSelect');
+        if (!profiles.length) {
+            sel.innerHTML = '<option value="">No profiles — add one in Settings</option>';
+            return;
+        }
+        sel.innerHTML = profiles.map(p =>
+            `<option value="${esc(p.id)}" ${p.is_default ? 'selected' : ''}>${esc(p.name)}${p.is_default ? ' (default)' : ''}</option>`
+        ).join('');
+    } catch (_) {
+        document.getElementById('profileSelect').innerHTML = '<option value="">Failed to load profiles</option>';
+    }
+}
+
+// ── Send ─────────────────────────────────────────────────────────────────────
+
+function updateSendCount() {
+    document.getElementById('sendCount').textContent = recipients.length;
+}
+
+async function startOutreach() {
+    const subject   = document.getElementById('subject').value.trim();
+    const htmlBody  = document.getElementById('htmlBody').value.trim();
+    const profileId = document.getElementById('profileSelect').value;
+    const delay     = parseInt(document.getElementById('delaySeconds').value) || 120;
+    const name      = document.getElementById('campaignName').value.trim() || 'Custom Outreach';
+    const errEl     = document.getElementById('sendError');
+
+    errEl.style.display = 'none';
+
+    if (!recipients.length) return showErr('Add at least one recipient first.');
+    if (!subject)           return showErr('Subject is required.');
+    if (!htmlBody)          return showErr('Email body is required.');
+    if (!profileId)         return showErr('Select an SMTP profile.');
+
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating job…';
+
+    try {
+        const res = await api.post('/outreach/send', {
+            campaign_name:     name,
+            subject,
+            html_body:         htmlBody,
+            recipients,
+            sender_profile_id: profileId,
+            interval_seconds:  delay,
+            daily_limit:       500,
+        });
+
+        activeJobId = res.job_id;
+        showProgressCard(res.total);
+        startPolling();
+        showToast(`Outreach started — ${res.total} recipients queued`, 'success');
+    } catch (err) {
+        showErr(err.message || 'Failed to start outreach');
+        btn.disabled = false;
+        btn.textContent = `Send Outreach — ${recipients.length} Recipients`;
+    }
+}
+
+function showErr(msg) {
+    const el = document.getElementById('sendError');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+function showProgressCard(total) {
+    document.getElementById('sendCard').style.display = 'none';
+    const card = document.getElementById('progressCard');
+    card.style.display = 'block';
+    document.getElementById('pTotal').textContent = total;
+    document.getElementById('pSent').textContent  = '0';
+    document.getElementById('pFailed').textContent = '0';
+    document.getElementById('pPct').textContent   = '0%';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('pStatus').textContent = 'starting…';
+    document.getElementById('pCurrent').textContent = '—';
+    document.getElementById('pNext').textContent    = '—';
+}
+
+// ── Tick polling ─────────────────────────────────────────────────────────────
+
+function startPolling() {
+    if (tickInterval) clearInterval(tickInterval);
+    tickInterval = setInterval(doTick, 4000);
+    doTick(); // immediate first tick
+}
+
+async function doTick() {
+    if (!activeJobId) return;
+    try {
+        const s = await api.post(`/outreach/tick/${activeJobId}`);
+        updateProgress(s);
+        if (s.status === 'completed' || s.status === 'failed' || s.status === 'cancelled' || s.status === 'paused') {
+            stopPolling();
+            showOutreachDone(s);
+        }
+    } catch (_) {}
+}
+
+function showOutreachDone(s) {
+    const sent   = s.sent_count   ?? 0;
+    const failed = s.failed_count ?? 0;
+    const total  = s.total_count  ?? 0;
+
+    const banner = document.getElementById('outreachDoneBanner');
+    const icon   = document.getElementById('oDoneIcon');
+    const title  = document.getElementById('oDoneTitle');
+    const body   = document.getElementById('oDoneBody');
+    const pTitle = document.getElementById('progressTitle');
+    const cancelBtn = document.getElementById('cancelOutreachBtn');
+    const histBtn   = document.getElementById('viewHistoryBtn');
+
+    cancelBtn.style.display = 'none';
+    histBtn.style.display   = 'inline-flex';
+
+    if (s.status === 'completed') {
+        pTitle.textContent      = '✓ Outreach Complete';
+        banner.style.background = 'rgba(22,163,74,0.1)';
+        banner.style.border     = '1px solid rgba(22,163,74,0.3)';
+        icon.textContent        = '✅';
+        title.textContent       = 'All emails sent successfully!';
+        title.style.color       = '#16a34a';
+        body.textContent        = `${sent} of ${total} delivered${failed > 0 ? `, ${failed} failed` : ''}.`;
+        document.getElementById('progressFill').style.background = '#16a34a';
+        showToast(`Outreach complete — ${sent} emails sent!`, 'success');
+
+    } else if (s.status === 'failed') {
+        pTitle.textContent      = '✗ Outreach Failed';
+        banner.style.background = 'rgba(220,38,38,0.08)';
+        banner.style.border     = '1px solid rgba(220,38,38,0.3)';
+        icon.textContent        = '❌';
+        title.textContent       = 'Sending failed';
+        title.style.color       = '#dc2626';
+        body.textContent        = `Stopped after ${sent} sent. Check SMTP settings in Settings → Sender Profiles.`;
+        showToast('Outreach failed — check SMTP settings', 'error');
+
+    } else if (s.status === 'paused') {
+        pTitle.textContent      = '⏸ Paused — Daily Limit Reached';
+        banner.style.background = 'rgba(217,119,6,0.08)';
+        banner.style.border     = '1px solid rgba(217,119,6,0.3)';
+        icon.textContent        = '⏸️';
+        title.textContent       = 'Daily send limit reached';
+        title.style.color       = '#d97706';
+        body.textContent        = `${sent} of ${total} sent today. Will resume automatically tomorrow.`;
+        showToast('Daily limit reached — outreach paused until tomorrow', 'warning');
+
+    } else {
+        pTitle.textContent      = 'Outreach Cancelled';
+        icon.textContent        = '🛑';
+        title.textContent       = 'Cancelled';
+        title.style.color       = 'var(--text-secondary)';
+        body.textContent        = `Stopped after ${sent} sent.`;
+    }
+
+    banner.style.display = 'block';
+    setTimeout(() => banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function stopPolling() {
+    if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+}
+
+function updateProgress(s) {
+    document.getElementById('pSent').textContent    = s.sent_count ?? 0;
+    document.getElementById('pFailed').textContent  = s.failed_count ?? 0;
+    document.getElementById('pTotal').textContent   = s.total_count ?? 0;
+    document.getElementById('pPct').textContent     = (s.progress_pct ?? 0) + '%';
+    document.getElementById('progressFill').style.width = (s.progress_pct ?? 0) + '%';
+    document.getElementById('pStatus').textContent  = s.status ?? '—';
+    document.getElementById('pCurrent').textContent = s.current_recipient ?? '—';
+
+    if (s.next_send_at) {
+        const diff = Math.max(0, Math.round((new Date(s.next_send_at) - Date.now()) / 1000));
+        document.getElementById('pNext').textContent = diff > 0 ? `in ${diff}s` : 'now';
+    } else {
+        document.getElementById('pNext').textContent = '—';
+    }
+}
+
+async function cancelOutreach() {
+    if (!activeJobId) return;
+    stopPolling();
+    try {
+        await api.post(`/outreach/${activeJobId}/cancel`);
+        showToast('Outreach cancelled', 'warning');
+        document.getElementById('pStatus').textContent = 'cancelled';
+    } catch (err) {
+        showToast(err.message || 'Failed to cancel', 'error');
+    }
+}
+
+function startNewOutreach() {
+    stopPolling();
+    activeJobId = null;
+    document.getElementById('progressCard').style.display       = 'none';
+    document.getElementById('outreachDoneBanner').style.display = 'none';
+    document.getElementById('progressTitle').textContent        = 'Sending in Progress…';
+    document.getElementById('progressFill').style.background    = '';
+    document.getElementById('cancelOutreachBtn').style.display  = 'inline-flex';
+    document.getElementById('viewHistoryBtn').style.display     = 'none';
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = false;
+    btn.textContent = `Send Outreach — ${recipients.length} Recipients`;
+    document.getElementById('sendCard').style.display = 'block';
+    document.getElementById('sendError').style.display = 'none';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str ?? '';
+    return d.innerHTML;
+}
+
+function showToast(msg, type = 'success') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3800);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadProfiles();
+renderRecipientsTable();
+updateSendCount();
+</script>
+</body>
+</html>

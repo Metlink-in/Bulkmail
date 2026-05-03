@@ -29,6 +29,22 @@ class UserUpdateAdmin(BaseModel):
 class ResetPasswordAdmin(BaseModel):
     new_password: str
 
+class AdminSenderProfile(BaseModel):
+    name: str
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    smtp_password: str
+    use_tls: bool = False
+    use_ssl: bool = False
+    imap_host: Optional[str] = None
+    imap_port: Optional[int] = 993
+    imap_user: Optional[str] = None
+    imap_password: Optional[str] = None
+    from_name: str
+    reply_to_email: str
+    is_default: bool = False
+
 def get_db_id(doc):
     return str(doc.get("_id"))
 
@@ -435,6 +451,133 @@ async def get_user_smtp_profiles(user_id: str, current_admin: Dict[str, Any] = D
                 p["imap_password"] = ""
         result.append(p)
     return json_safe(result)
+
+
+@router.post("/users/{user_id}/smtp-profiles")
+async def admin_create_smtp_profile(
+    user_id: str, body: AdminSenderProfile,
+    current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)
+):
+    from utils.helpers import encrypt_secret
+    data = body.dict()
+    key = settings.ENCRYPTION_KEY
+    data["smtp_password"] = encrypt_secret(data["smtp_password"], key)
+    if data.get("imap_password"):
+        data["imap_password"] = encrypt_secret(data["imap_password"], key)
+    data["user_id"] = user_id
+    if data["is_default"]:
+        await db.user_credentials.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
+    result = await db.user_credentials.insert_one(data)
+    return json_safe({"id": str(result.inserted_id), "message": "Profile created"})
+
+
+@router.put("/users/{user_id}/smtp-profiles/{profile_id}")
+async def admin_update_smtp_profile(
+    user_id: str, profile_id: str, body: AdminSenderProfile,
+    current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)
+):
+    from bson import ObjectId
+    from utils.helpers import encrypt_secret
+    try:
+        oid = ObjectId(profile_id)
+    except Exception:
+        oid = profile_id
+    data = body.dict()
+    key = settings.ENCRYPTION_KEY
+    if data["smtp_password"] == "••••••••":
+        data.pop("smtp_password")
+    else:
+        data["smtp_password"] = encrypt_secret(data["smtp_password"], key)
+    if data.get("imap_password") == "••••••••":
+        data.pop("imap_password")
+    elif data.get("imap_password"):
+        data["imap_password"] = encrypt_secret(data["imap_password"], key)
+    if data.get("is_default"):
+        await db.user_credentials.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
+    res = await db.user_credentials.update_one(
+        {"_id": oid, "user_id": user_id},
+        {"$set": data}
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return {"message": "Profile updated"}
+
+
+@router.delete("/users/{user_id}/smtp-profiles/{profile_id}")
+async def admin_delete_smtp_profile(
+    user_id: str, profile_id: str,
+    current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)
+):
+    from bson import ObjectId
+    try:
+        oid = ObjectId(profile_id)
+    except Exception:
+        oid = profile_id
+    res = await db.user_credentials.delete_one({"_id": oid, "user_id": user_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return {"message": "Profile deleted"}
+
+
+@router.post("/users/{user_id}/smtp-profiles/{profile_id}/set-default")
+async def admin_set_default_profile(
+    user_id: str, profile_id: str,
+    current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)
+):
+    from bson import ObjectId
+    try:
+        oid = ObjectId(profile_id)
+    except Exception:
+        oid = profile_id
+    await db.user_credentials.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
+    res = await db.user_credentials.update_one(
+        {"_id": oid, "user_id": user_id},
+        {"$set": {"is_default": True}}
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return {"message": "Profile set as default"}
+
+
+@router.post("/users/{user_id}/smtp-profiles/{profile_id}/test")
+async def admin_test_smtp_profile(
+    user_id: str, profile_id: str,
+    current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)
+):
+    import aiosmtplib
+    import time
+    from bson import ObjectId
+    from utils.helpers import decrypt_secret
+    try:
+        oid = ObjectId(profile_id)
+    except Exception:
+        oid = profile_id
+    p = await db.user_credentials.find_one({"_id": oid, "user_id": user_id})
+    if not p or not p.get("smtp_host"):
+        raise HTTPException(status_code=404, detail="Profile not found or SMTP not configured")
+    try:
+        password = decrypt_secret(p["smtp_password"], settings.ENCRYPTION_KEY)
+    except Exception:
+        password = p.get("smtp_password", "")
+    host = p["smtp_host"]
+    port = p["smtp_port"]
+    user = p["smtp_user"]
+    use_ssl = p.get("use_ssl", False)
+    use_tls = p.get("use_tls", False)
+    start = time.time()
+    try:
+        is_ssl = (port == 465 or use_ssl)
+        needs_starttls = (not is_ssl) and (use_tls or port == 587)
+        smtp = aiosmtplib.SMTP(hostname=host, port=port, use_tls=is_ssl, timeout=20)
+        await smtp.connect()
+        if needs_starttls:
+            await smtp.starttls()
+        await smtp.login(user, password)
+        await smtp.quit()
+        latency = int((time.time() - start) * 1000)
+        return {"success": True, "message": f"SMTP connection to {host}:{port} successful", "latency_ms": latency}
+    except Exception as e:
+        return {"success": False, "message": str(e), "latency_ms": 0}
 
 
 @router.post("/seed-templates")

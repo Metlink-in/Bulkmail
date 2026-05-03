@@ -148,9 +148,6 @@
                             </p>
                         </div>
                         <div style="display:flex;gap:8px;flex-shrink:0;margin-left:16px;">
-                            <button id="applyEnvBtn" onclick="applyEnvSmtp()" class="btn btn-secondary btn-sm" style="display:none;" title="Pre-fill SMTP from server .env (admin only)">
-                                ⚙️ Apply .env SMTP
-                            </button>
                             <button onclick="openProfileModal()" class="btn btn-primary btn-sm">+ Add Profile</button>
                         </div>
                     </div>
@@ -774,40 +771,9 @@ function escHtml(str) {
     return d.innerHTML;
 }
 
-/* ── Admin: Apply .env SMTP ─────────────────────────── */
-async function checkAdminEnvSmtp() {
-    const payload = api.getTokenPayload();
-    if (!payload || payload.role !== 'admin') return;
-    try {
-        const env = await api.get('/settings/env-smtp');
-        if (env && env.configured) {
-            const btn = document.getElementById('applyEnvBtn');
-            if (btn) {
-                btn.style.display = 'inline-flex';
-                btn.title = `Apply .env SMTP: ${env.smtp_user} via ${env.smtp_host}:${env.smtp_port}`;
-            }
-        }
-    } catch (_) {}
-}
-
-async function applyEnvSmtp() {
-    const btn = document.getElementById('applyEnvBtn');
-    if (btn) btn.classList.add('btn-loading');
-    try {
-        const res = await api.post('/settings/profiles/from-env', {});
-        showToast(res.message || 'SMTP profile applied from .env');
-        loadProfiles();
-    } catch (err) {
-        showToast(err.message || 'Failed — check SMTP_PASSWORD in .env', 'danger');
-    } finally {
-        if (btn) btn.classList.remove('btn-loading');
-    }
-}
-
 /* ── Init ───────────────────────────────────────────── */
 loadProfiles();
 loadSettings();
-checkAdminEnvSmtp();
 </script>
 </body>
 </html>

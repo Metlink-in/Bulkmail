@@ -11,12 +11,20 @@
     <style>
         .calendar-container { background: var(--bg-primary); border-radius: var(--radius-lg); padding: 24px; border: 1px solid var(--border); margin-bottom: 24px; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 16px; }
-        .calendar-day { min-height: 100px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); position: relative; }
+        .calendar-day { min-height: 80px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); position: relative; }
         .calendar-day.today { border-color: var(--primary); background: var(--primary-light); }
         .calendar-header-day { text-align: center; font-weight: 600; font-size: 12px; color: var(--text-secondary); padding-bottom: 8px; }
         .event-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); margin: 2px auto; display: block; }
-        .schedule-list-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); }
+        .schedule-list-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px; }
         .schedule-list-item:last-child { border-bottom: none; }
+        /* Modal responsive grid */
+        .sched-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 600px) {
+            .sched-form-grid { grid-template-columns: 1fr; }
+            .calendar-day { min-height: 48px; padding: 4px; font-size: 11px; }
+            .calendar-header-day { font-size: 10px; }
+            .modal { max-width: 100% !important; margin: 0 12px; }
+        }
     </style>
 </head>
 <body>
@@ -72,16 +80,16 @@
             <div class="modal-body">
                 <div class="input-group">
                     <label class="input-label">Schedule Name</label>
-                    <input type="text" id="sName" class="input" placeholder="e.g. Weekly Client Newsletter">
+                    <input type="text" id="sName" class="input" placeholder="e.g. Weekly Client Newsletter" onkeydown="if(event.key==='Enter') saveSchedule()">
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                <div class="sched-form-grid">
                     <div class="input-group">
                         <label class="input-label">Template</label>
-                        <select id="sTemplate" class="input"></select>
+                        <select id="sTemplate" class="input"><option value="">Loading…</option></select>
                     </div>
                     <div class="input-group">
                         <label class="input-label">Contact List</label>
-                        <select id="sList" class="input"></select>
+                        <select id="sList" class="input"><option value="">Loading…</option></select>
                     </div>
                 </div>
                 <div class="input-group">
@@ -92,10 +100,10 @@
                         <label style="display:flex; align-items:center; gap:8px;"><input type="radio" name="freq" value="weekly"> Weekly</label>
                     </div>
                 </div>
-                <div id="timingOpts" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                <div id="timingOpts">
                     <div class="input-group">
                         <label class="input-label">Run At / Time</label>
-                        <input type="datetime-local" id="sTime" class="input">
+                        <input type="datetime-local" id="sTime" class="input" onkeydown="if(event.key==='Enter') saveSchedule()">
                     </div>
                 </div>
             </div>
@@ -139,10 +147,15 @@
                 renderCalendar(schedules);
                 
                 const tSel = document.getElementById('sTemplate');
-                templates.forEach(t => tSel.innerHTML += `<option value="${t.id}">${t.name}</option>`);
-                
+                tSel.innerHTML = templates.length
+                    ? templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+                    : '<option value="">No templates found</option>';
+
                 const lSel = document.getElementById('sList');
-                lists.items.forEach(l => lSel.innerHTML += `<option value="${l.id}">${l.name}</option>`);
+                const listArr = Array.isArray(lists) ? lists : (lists.items || []);
+                lSel.innerHTML = listArr.length
+                    ? listArr.map(l => `<option value="${l.id}">${l.name} (${l.count ?? 0})</option>`).join('')
+                    : '<option value="">No contact lists found</option>';
 
             } catch (err) { console.error(err); }
         }

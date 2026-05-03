@@ -21,6 +21,7 @@ from routers.ai import router as ai_router
 from routers.template import router as template_router
 from routers.schedule import router as schedule_router
 from routers.replies import router as replies_router
+from routers.outreach import router as outreach_router
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,7 @@ app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
 app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
 app.include_router(schedule_router, prefix="/api/schedule", tags=["schedule"])
 app.include_router(replies_router, prefix="/api/replies", tags=["replies"])
+app.include_router(outreach_router, prefix="/api/outreach", tags=["outreach"])
 
 @app.get("/health", tags=["system"])
 async def health_check():

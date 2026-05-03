@@ -134,61 +134,6 @@ async def delete_sender_profile(profile_id: str, current_user: Dict[str, Any] = 
     await db.user_credentials.delete_one({"_id": oid, "user_id": user_id})
     return {"message": "Profile deleted"}
 
-@router.get("/env-smtp")
-async def get_env_smtp(current_user: Dict[str, Any] = Depends(require_admin)):
-    """Return what SMTP vars are configured in .env (password masked)."""
-    configured = bool(settings.SMTP_HOST and settings.SMTP_USER)
-    return {
-        "configured": configured,
-        "smtp_host": settings.SMTP_HOST or "",
-        "smtp_port": settings.SMTP_PORT or 587,
-        "smtp_user": settings.SMTP_USER or "",
-        "smtp_password": "••••••••" if settings.SMTP_PASSWORD else "",
-        "use_tls": settings.SMTP_USE_TLS,
-        "use_ssl": settings.SMTP_USE_SSL,
-        "from_name": settings.SMTP_FROM_NAME or "",
-        "reply_to_email": settings.SMTP_REPLY_TO or "",
-    }
-
-@router.post("/profiles/from-env")
-async def apply_env_smtp(current_user: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
-    """Create or update the user's 'Default (.env)' sender profile from env vars."""
-    if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        raise HTTPException(status_code=400, detail="SMTP_HOST, SMTP_USER and SMTP_PASSWORD must all be set in .env")
-
-    user_id = str(current_user["_id"])
-    key = settings.ENCRYPTION_KEY
-    enc_password = encrypt_secret(settings.SMTP_PASSWORD, key)
-
-    data = {
-        "name": "Default (.env)",
-        "smtp_host": settings.SMTP_HOST,
-        "smtp_port": settings.SMTP_PORT or 587,
-        "smtp_user": settings.SMTP_USER,
-        "smtp_password": enc_password,
-        "use_tls": settings.SMTP_USE_TLS,
-        "use_ssl": settings.SMTP_USE_SSL,
-        "from_name": settings.SMTP_FROM_NAME or settings.SMTP_USER,
-        "reply_to_email": settings.SMTP_REPLY_TO or settings.SMTP_USER,
-        "imap_host": None,
-        "imap_port": 993,
-        "imap_user": None,
-        "imap_password": None,
-        "user_id": user_id,
-        "is_default": True,
-    }
-
-    # Clear existing default
-    await db.user_credentials.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
-
-    # Upsert by name so clicking the button twice doesn't create duplicates
-    existing = await db.user_credentials.find_one({"user_id": user_id, "name": "Default (.env)"})
-    if existing:
-        await db.user_credentials.update_one({"_id": existing["_id"]}, {"$set": data})
-        return {"message": "Default (.env) profile updated from environment variables"}
-    else:
-        await db.user_credentials.insert_one(data)
-        return {"message": "Default (.env) profile created from environment variables"}
 
 @router.get("")
 async def get_settings(current_user: Dict[str, Any] = Depends(require_user), db = Depends(get_db)):

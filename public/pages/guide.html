@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>User Guide - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .guide-hero { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); border-radius: var(--radius-xl); padding: 48px 40px; color: #fff; margin-bottom: 32px; }
+        .guide-hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 10px; }
+        .guide-hero p { font-size: 16px; opacity: 0.85; max-width: 560px; line-height: 1.6; }
+
+        .section-anchor { scroll-margin-top: 24px; }
+        .guide-section { margin-bottom: 32px; }
+        .guide-section-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+        .guide-section-icon { font-size: 22px; }
+
+        .step-card { display: flex; gap: 16px; align-items: flex-start; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 10px; background: var(--bg-secondary); }
+        .step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+        .step-content h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .step-content p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+
+        .tag-example { display: inline-block; background: rgba(37,99,235,0.1); color: var(--primary); border: 1px solid rgba(37,99,235,0.25); border-radius: 4px; font-family: monospace; font-size: 12px; padding: 1px 6px; }
+
+        .info-box { background: rgba(37,99,235,0.07); border-left: 3px solid var(--primary); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 14px 16px; margin: 12px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+        .warn-box  { background: rgba(217,119,6,0.07);  border-left: 3px solid #d97706; border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 14px 16px; margin: 12px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+        .toc { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px 24px; margin-bottom: 32px; }
+        .toc h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 12px; }
+        .toc a { display: block; font-size: 14px; color: var(--primary); text-decoration: none; padding: 3px 0; }
+        .toc a:hover { text-decoration: underline; }
+        .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+        @media (max-width: 600px) { .toc-grid { grid-template-columns: 1fr; } .guide-hero { padding: 28px 20px; } .guide-hero h1 { font-size: 24px; } }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+        .feature-pill { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; font-size: 13px; }
+        .feature-pill strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--text-primary); }
+        .feature-pill span { color: var(--text-secondary); }
+
+        .restart-guide { margin-top: 8px; font-size: 13px; color: var(--text-muted); }
+        .restart-guide a { color: var(--primary); cursor: pointer; text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-logo">BulkReach Pro</div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html"              class="sidebar-nav-item">Dashboard</a>
+            <a href="/pages/bulk-mail.html"        class="sidebar-nav-item">Bulk Mail</a>
+            <a href="/pages/custom-outreach.html"  class="sidebar-nav-item" data-outreach-link="1">Custom Outreach</a>
+            <a href="/pages/history.html"          class="sidebar-nav-item">History</a>
+            <a href="/pages/templates.html"        class="sidebar-nav-item">Templates</a>
+            <a href="/pages/contacts.html"         class="sidebar-nav-item">Contacts</a>
+            <a href="/pages/schedule.html"         class="sidebar-nav-item">Schedules</a>
+            <a href="/pages/replies.html"          class="sidebar-nav-item">Replies</a>
+            <a href="/pages/guide.html"            class="sidebar-nav-item active" data-guide-link="1">? User Guide</a>
+            <a href="/pages/settings.html"         class="sidebar-nav-item">Settings</a>
+            <a href="/pages/profile.html"          class="sidebar-nav-item">Profile</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <!-- Hero -->
+        <div class="guide-hero">
+            <h1>📘 BulkReach Pro — User Guide</h1>
+            <p>Everything you need to send smart, personalized email campaigns. Follow the steps below to go from setup to your first sent campaign.</p>
+            <p class="restart-guide" style="margin-top:16px; opacity:0.8;">
+                Want the interactive tour? <a onclick="restartOnboarding()" style="color:#93c5fd;">Restart the setup guide →</a>
+            </p>
+        </div>
+
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h3>Contents</h3>
+            <div class="toc-grid">
+                <div>
+                    <a href="#getting-started">1. Getting Started</a>
+                    <a href="#contacts">2. Contacts</a>
+                    <a href="#templates">3. Templates & Merge Tags</a>
+                    <a href="#bulk-mail">4. Bulk Mail Campaigns</a>
+                </div>
+                <div>
+                    <a href="#custom-outreach">5. Custom Outreach</a>
+                    <a href="#schedules">6. Schedules</a>
+                    <a href="#replies">7. Reply Tracking</a>
+                    <a href="#history">8. History & Analytics</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. Getting Started -->
+        <div class="card guide-section section-anchor" id="getting-started">
+            <div class="guide-section-title"><span class="guide-section-icon">🚀</span> 1. Getting Started</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Before you can send emails, you need to connect your email account via SMTP.</p>
+
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>Go to Settings → Sender Profiles</h4>
+                    <p>Click <strong>Settings</strong> in the sidebar, then click <strong>+ Add Profile</strong>. Enter your SMTP credentials — host, port, username, and password.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Common SMTP Settings</h4>
+                    <p>
+                        <strong>Gmail:</strong> host <code>smtp.gmail.com</code>, port <code>587</code>, STARTTLS ✓ — use an <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" style="color:var(--primary)">App Password</a>.<br>
+                        <strong>Outlook:</strong> host <code>smtp.office365.com</code>, port <code>587</code>, STARTTLS ✓.<br>
+                        <strong>Custom SMTP:</strong> check with your email provider.
+                    </p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>Test Your Connection</h4>
+                    <p>After saving, click <strong>Test</strong> on the profile card. A green success message with latency confirms it works. Fix any errors before sending campaigns.</p>
+                </div>
+            </div>
+            <div class="info-box">💡 <strong>Tip:</strong> Set one profile as <strong>Default</strong> — it will be used automatically for all campaigns unless you pick a different one.</div>
+        </div>
+
+        <!-- 2. Contacts -->
+        <div class="card guide-section section-anchor" id="contacts">
+            <div class="guide-section-title"><span class="guide-section-icon">👥</span> 2. Contacts</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Contacts are organized into <strong>lists</strong>. A single contact can belong to multiple lists.</p>
+
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>Import from CSV</h4>
+                    <p>Go to <strong>Contacts</strong> → click <strong>Import CSV</strong>. Your CSV should have these columns (headers are case-insensitive):</p>
+                    <p style="margin-top:8px; font-family:monospace; background:var(--bg-secondary); padding:8px 10px; border-radius:6px; font-size:12px;">email, name, org (company), custom_1, custom_2, custom_3</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Paste Emails Directly</h4>
+                    <p>Paste a list of email addresses (one per line or comma-separated). They'll be added with their email prefix as the name.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>Manage Lists</h4>
+                    <p>Create named lists (e.g. "Q2 Leads", "Webinar Attendees"). Each list shows contact count. You can delete individual contacts or entire lists.</p>
+                </div>
+            </div>
+            <div class="warn-box">⚠️ <strong>Important:</strong> Make sure your contact's <strong>name</strong> field is filled in, not left as "user" or the email prefix. This is what replaces <span class="tag-example">{first_name}</span> in your emails.</div>
+        </div>
+
+        <!-- 3. Templates -->
+        <div class="card guide-section section-anchor" id="templates">
+            <div class="guide-section-title"><span class="guide-section-icon">✉️</span> 3. Templates &amp; Merge Tags</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Templates are reusable email designs. BulkReach includes 9 professional templates to start with.</p>
+
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>Browse Global Templates</h4>
+                    <p>Go to <strong>Templates</strong>. Global templates (marked with a star) are available to all users. Click <strong>Preview</strong> to see how they look, or <strong>Use Template</strong> to copy it as your own.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Edit a Template</h4>
+                    <p>Open a template in the editor. Use the <strong>Visual</strong> tab for point-and-click editing, <strong>HTML</strong> tab for raw code, and <strong>CSS</strong> tab for custom styles. Changes auto-preview on the right.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>Use Merge Tags</h4>
+                    <p>Place these anywhere in the subject or body — they get replaced per recipient when sending:</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+                        <span class="tag-example">{first_name}</span>
+                        <span class="tag-example">{last_name}</span>
+                        <span class="tag-example">{full_name}</span>
+                        <span class="tag-example">{company}</span>
+                        <span class="tag-example">{org}</span>
+                        <span class="tag-example">{email}</span>
+                        <span class="tag-example">{custom_1}</span>
+                        <span class="tag-example">{custom_2}</span>
+                        <span class="tag-example">{custom_3}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="info-box">💡 If a contact has no name, <span class="tag-example">{first_name}</span> will use their email prefix automatically (e.g. <em>john</em> from john@example.com).</div>
+        </div>
+
+        <!-- 4. Bulk Mail -->
+        <div class="card guide-section section-anchor" id="bulk-mail">
+            <div class="guide-section-title"><span class="guide-section-icon">📤</span> 4. Bulk Mail Campaigns</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Send a template to a saved contact list. Each email is sent individually with personalized merge tags.</p>
+
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>Go to Bulk Mail</h4>
+                    <p>Select your <strong>Contact List</strong>, pick a <strong>Template</strong> (or write a custom subject + body), choose your <strong>SMTP Profile</strong>, and set a <strong>delay</strong> between sends.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Set Delay &amp; Daily Limit</h4>
+                    <p>A delay of <strong>120–300 seconds</strong> between emails helps avoid spam filters. The daily limit (default 500) prevents your account from being flagged by your email provider.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>Monitor Progress</h4>
+                    <p>After launching, a live progress bar shows sent / failed counts. The page polls every few seconds. If you navigate away, you can check <strong>History</strong> to see the job's status.</p>
+                </div>
+            </div>
+            <div class="warn-box">⚠️ <strong>Gmail tip:</strong> Use an App Password (not your main password). Enable 2FA on your Google account first, then create an App Password at <code>myaccount.google.com/apppasswords</code>.</div>
+        </div>
+
+        <!-- 5. Custom Outreach -->
+        <div class="card guide-section section-anchor" id="custom-outreach">
+            <div class="guide-section-title"><span class="guide-section-icon">🎯</span> 5. Custom Outreach</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Send hyper-personalized one-off emails with custom name &amp; company data — no contact list needed.</p>
+
+            <div class="two-col" style="margin-bottom:16px;">
+                <div class="feature-pill">
+                    <strong>📋 Paste or Upload CSV</strong>
+                    <span>Include columns: email, first_name, last_name, company. Auto-detected from headers.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>✍️ Compose with Merge Tags</strong>
+                    <span>Click merge tag chips to insert them at cursor. Preview resolves them live for any recipient.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>👁️ Live Preview</strong>
+                    <span>Pick any recipient from the dropdown and see exactly how their email will look before sending.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>📊 Track Progress</strong>
+                    <span>Real-time progress bar, sent/failed counts, current recipient, and next-send countdown.</span>
+                </div>
+            </div>
+            <div class="info-box">💡 <strong>When to use Custom Outreach vs Bulk Mail:</strong> Use Custom Outreach when you have a fresh list with names &amp; companies (e.g. LinkedIn exports, Apollo.io exports). Use Bulk Mail for your saved contact lists and recurring campaigns.</div>
+        </div>
+
+        <!-- 6. Schedules -->
+        <div class="card guide-section section-anchor" id="schedules">
+            <div class="guide-section-title"><span class="guide-section-icon">🗓️</span> 6. Schedules</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Automate recurring campaigns — run a template to a contact list daily, weekly, or at a specific time.</p>
+
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>Create a Schedule</h4>
+                    <p>Click <strong>+ New Schedule</strong>. Enter a name, pick a template and contact list, choose the frequency (Once / Daily / Weekly), and set the run time.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Pause &amp; Resume</h4>
+                    <p>Toggle the switch next to any schedule to pause or resume it. Paused schedules won't run until reactivated.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>Calendar View</h4>
+                    <p>The calendar at the top shows when your scheduled campaigns are next due to run. Dots on a date indicate scheduled jobs.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Replies -->
+        <div class="card guide-section section-anchor" id="replies">
+            <div class="guide-section-title"><span class="guide-section-icon">💬</span> 7. Reply Tracking</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">See who replied to your campaigns and read their messages without leaving the app.</p>
+
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>Set Up IMAP</h4>
+                    <p>In <strong>Settings → Sender Profile</strong>, fill in the IMAP section (host, port, username, password). BulkReach checks your inbox periodically and imports replies.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Read Replies</h4>
+                    <p>Go to <strong>Replies</strong>. Unread replies show a badge on the sidebar. Click any reply to read the full message. Mark as read to keep your inbox organized.</p>
+                </div>
+            </div>
+            <div class="info-box">💡 The unread reply count appears as a badge on the sidebar Replies link and on the Dashboard.</div>
+        </div>
+
+        <!-- 8. History -->
+        <div class="card guide-section section-anchor" id="history">
+            <div class="guide-section-title"><span class="guide-section-icon">📊</span> 8. History &amp; Analytics</div>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Track every campaign and see per-email delivery results.</p>
+
+            <div class="two-col">
+                <div class="feature-pill">
+                    <strong>📋 Campaign List</strong>
+                    <span>See all campaigns with total / sent / failed counts and status badges.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>🔍 Per-Email Logs</strong>
+                    <span>Click any campaign row to expand and see each recipient's delivery status and message ID.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>🔎 Filter &amp; Search</strong>
+                    <span>Filter by status (completed / running / failed) or search by campaign name.</span>
+                </div>
+                <div class="feature-pill">
+                    <strong>📥 Export CSV</strong>
+                    <span>Download campaign data as a CSV for external reporting or analysis.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align:center; padding:32px 0; color:var(--text-muted); font-size:13px;">
+            BulkReach Pro — Questions? Use the feedback link in your profile or contact support.
+        </div>
+
+    </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+requireAuth();
+
+function restartOnboarding() {
+    localStorage.removeItem('bulkreach_onboarding_done');
+    window.location.href = '/dashboard.html';
+}
+</script>
+</body>
+</html>

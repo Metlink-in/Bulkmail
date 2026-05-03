@@ -127,8 +127,34 @@
       };
     }
 
-    // Admin link
+    // Custom Outreach nav link — inject after Bulk Mail if not already present
     const nav = document.querySelector('.sidebar-nav');
+    if (nav && !nav.querySelector('[data-outreach-link]')) {
+      const bulkMailLink = [...nav.querySelectorAll('a')].find(a => a.href.includes('bulk-mail'));
+      if (bulkMailLink) {
+        const outreachLink = document.createElement('a');
+        outreachLink.href = '/pages/custom-outreach.html';
+        outreachLink.className = 'sidebar-nav-item' + (window.location.pathname.includes('custom-outreach') ? ' active' : '');
+        outreachLink.setAttribute('data-outreach-link', '1');
+        outreachLink.textContent = 'Custom Outreach';
+        bulkMailLink.parentNode.insertBefore(outreachLink, bulkMailLink.nextSibling);
+      }
+    }
+
+    // Guide link — inject before Settings if not already present
+    if (nav && !nav.querySelector('[data-guide-link]')) {
+      const settingsLink = [...nav.querySelectorAll('a')].find(a => a.href.includes('settings'));
+      if (settingsLink) {
+        const guideLink = document.createElement('a');
+        guideLink.href = '/pages/guide.html';
+        guideLink.className = 'sidebar-nav-item' + (window.location.pathname.includes('guide') ? ' active' : '');
+        guideLink.setAttribute('data-guide-link', '1');
+        guideLink.textContent = '? User Guide';
+        settingsLink.parentNode.insertBefore(guideLink, settingsLink);
+      }
+    }
+
+    // Admin link
     if (nav && payload.role === 'admin' && !nav.querySelector('[data-admin-link]')) {
       const div = document.createElement('div');
       div.setAttribute('data-admin-link', '1');
