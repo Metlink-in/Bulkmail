@@ -197,3 +197,70 @@
 .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .4s; }
 input:checked + .slider { background-color: var(--primary); }
 input:checked + .slider:before { transform: translateX(16px); }
+
+/* ── Mobile overlay (injected by sidebar.js) ─────────────────────── */
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 49; backdrop-filter: blur(2px);
+}
+.sidebar-overlay.show { display: block; }
+
+/* ── Hamburger button ────────────────────────────────────────────── */
+.mobile-menu-btn {
+  display: none; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: 1px solid var(--border);
+  border-radius: var(--radius-md); background: var(--bg-primary);
+  cursor: pointer; font-size: 18px; color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+/* ── Mobile ≤ 768px ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Show hamburger */
+  .mobile-menu-btn { display: flex; }
+
+  /* Cards */
+  .card { padding: 16px; border-radius: var(--radius-md); }
+
+  /* Buttons */
+  .btn { font-size: 13px; }
+  .btn-lg { padding: 10px 18px; font-size: 14px; }
+
+  /* Modals — slide up from bottom */
+  .modal-backdrop { align-items: flex-end; padding: 0; }
+  .modal {
+    max-width: 100%; width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh; display: flex; flex-direction: column;
+  }
+  .modal-body { overflow-y: auto; flex: 1; }
+
+  /* Toasts — bottom of screen */
+  .toast-container { top: auto; bottom: 16px; right: 12px; left: 12px; max-width: 100%; }
+
+  /* Tables — horizontal scroll with sticky first col */
+  .table-container { border-radius: var(--radius-sm); }
+  .table th, .table td { padding: 10px 12px; font-size: 13px; white-space: nowrap; }
+
+  /* Stat cards */
+  .stat-card .val { font-size: 24px; }
+
+  /* Tabs — horizontal scroll */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0; padding-bottom: 1px; flex-wrap: nowrap; }
+  .tab-item { white-space: nowrap; padding: 10px 14px; font-size: 13px; }
+
+  /* Input groups */
+  .input { font-size: 16px; } /* prevents iOS zoom on focus */
+  select.input { font-size: 16px; }
+}
+
+/* ── Small phones ≤ 480px ────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .card { padding: 12px; }
+  .page-header-actions { flex-wrap: wrap; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .modal-header { font-size: 16px; padding: 14px 16px; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 12px 16px; }
+  .stat-card .val { font-size: 20px; }
+}

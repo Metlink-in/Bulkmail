@@ -1,0 +1,16 @@
+{
+  "name": "BulkReach Pro",
+  "short_name": "BulkReach",
+  "description": "AI-powered bulk email outreach platform",
+  "start_url": "/dashboard.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1E293B",
+  "theme_color": "#2563EB",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "en"
+}

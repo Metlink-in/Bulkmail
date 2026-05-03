@@ -101,46 +101,55 @@
         requireAuth();
         let currentPage = 1;
 
+        function esc(str) {
+            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
         async function loadJobs() {
             try {
                 const search = document.getElementById('search').value;
                 const status = document.getElementById('statusFilter').value;
-                const dateFrom = document.getElementById('dateFrom').value;
-                
+
                 let query = `?page=${currentPage}&limit=25`;
-                if(status) query += `&status=${status}`;
-                if(search) query += `&search=${search}`;
-                
+                if(status) query += `&status=${encodeURIComponent(status)}`;
+                if(search) query += `&search=${encodeURIComponent(search)}`;
+
                 const jobs = await api.get(`/mail/jobs${query}`);
                 const tBody = document.getElementById('jobsBody');
                 tBody.innerHTML = '';
-                
+
                 if(jobs.length === 0) {
-                    tBody.innerHTML = '<tr><td colspan="7" style="text-align:center">No campaigns found.</td></tr>';
+                    tBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-secondary)">No campaigns found.</td></tr>';
                     return;
                 }
-                
+
                 for(const j of jobs) {
                     const row = document.createElement('tr');
                     row.style.cursor = 'pointer';
                     row.onclick = (e) => { if(e.target.tagName !== 'BUTTON') toggleRow(j._id); };
-                    
+
                     let badgeClass = 'badge-neutral';
                     if(j.status === 'completed') badgeClass = 'badge-success';
-                    if(j.status === 'failed') badgeClass = 'badge-danger';
-                    if(j.status === 'running') badgeClass = 'badge-info';
-                    
+                    if(j.status === 'failed')    badgeClass = 'badge-danger';
+                    if(j.status === 'running')   badgeClass = 'badge-info';
+                    if(j.status === 'paused')    badgeClass = 'badge-warning';
+
+                    const td = document.createElement('td');
+                    const detailBtn = document.createElement('button');
+                    detailBtn.className = 'btn btn-sm btn-ghost';
+                    detailBtn.textContent = 'Details';
+                    detailBtn.onclick = e => { e.stopPropagation(); toggleRow(j._id); };
+                    td.appendChild(detailBtn);
+
                     row.innerHTML = `
-                        <td><strong>${j.campaign_name || j._id.substring(0,8)}</strong></td>
+                        <td><strong>${esc(j.campaign_name || j._id.substring(0,8))}</strong></td>
                         <td>${new Date(j.created_at).toLocaleDateString()}</td>
-                        <td>${j.total_count || '--'}</td>
-                        <td>${j.sent_count || 0}</td>
-                        <td>${j.failed_count || 0}</td>
-                        <td><span class="badge ${badgeClass}">${j.status}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-ghost" onclick="toggleRow('${j._id}')">Details</button>
-                        </td>
+                        <td>${esc(j.total_count ?? '--')}</td>
+                        <td>${esc(j.sent_count ?? 0)}</td>
+                        <td>${esc(j.failed_count ?? 0)}</td>
+                        <td><span class="badge ${badgeClass}">${esc(j.status)}</span></td>
                     `;
+                    row.appendChild(td);
                     tBody.appendChild(row);
                     
                     // Hidden Detail Row

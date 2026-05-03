@@ -26,6 +26,19 @@
         .log-entry { margin-bottom: 4px; }
         
         .progress-section { margin-top: 24px; padding: 24px; background: var(--bg-secondary); border-radius: var(--radius-lg); border: 1px solid var(--border); }
+
+        @media (max-width: 768px) {
+            #compose > div { grid-template-columns: 1fr !important; gap: 16px !important; }
+            .ai-panel { order: -1; }
+            .editor-content { min-height: 220px; padding: 14px; }
+            .editor-toolbar { padding: 8px; gap: 4px; }
+            #campaignTabs { gap: 0; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+        }
+        @media (max-width: 480px) {
+            .editor-content { min-height: 180px; font-size: 14px; }
+            .log-feed { height: 140px; }
+            .progress-section { padding: 14px; }
+        }
     </style>
 </head>
 <body>
