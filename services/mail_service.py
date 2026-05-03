@@ -126,12 +126,13 @@ async def build_email_message(
     s_sub = _re.sub(r'\s+\b(?:at|for|of|by|with)\s*$', '', s_sub.strip(), flags=_re.IGNORECASE)
     s_sub = _re.sub(r'^\s*,\s*', '', s_sub)
     s_sub = _re.sub(r'\s{2,}', ' ', s_sub).strip()
-    # HTML body: remove "at <empty-strong></strong>" and "at ." patterns
+    # HTML body: remove "at <empty-strong></strong>" and "at ." / "for </p>" patterns
     s_body = _re.sub(
         r'\s*\b(?:at|for|of|by|with)\s+(<(?:strong|b|em|span)[^>]*>)\s*(</(?:strong|b|em|span)>)',
         r' \1\2', s_body, flags=_re.IGNORECASE
     )
-    s_body = _re.sub(r'\s+\b(?:at|for|of|by|with)\s+([.,])', r' \1', s_body, flags=_re.IGNORECASE)
+    s_body = _re.sub(r'\s+\b(?:at|for|of|by|with)\s+([.,—])', r' \1', s_body, flags=_re.IGNORECASE)
+    s_body = _re.sub(r'\s+\b(?:at|for|of|by|with)\s+(</\w+>)', r' \1', s_body, flags=_re.IGNORECASE)
     s_body = _re.sub(r'  +', ' ', s_body)
 
     msg['Subject'] = s_sub

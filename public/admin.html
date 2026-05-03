@@ -16,6 +16,33 @@
         .admin-bar-container { flex:1; height: 100%; position: relative; display: flex; align-items: flex-end; }
         .admin-bar-val { font-size: 10px; position:absolute; top: -16px; left:50%; transform: translateX(-50%); color:var(--text-secondary); opacity:0; transition:opacity 0.2s; }
         .admin-bar-container:hover .admin-bar-val { opacity:1; }
+
+        /* Admin-specific responsive overrides */
+        .admin-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .admin-content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+        .admin-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        @media (max-width: 1200px) {
+            .admin-stats-grid { grid-template-columns: repeat(3, 1fr); }
+            .admin-content-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .admin-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .admin-content-grid { grid-template-columns: 1fr; }
+            .admin-header-actions { width: 100%; }
+            .admin-header-actions .btn { flex: 1; font-size: 12px; padding: 8px 10px; }
+        }
+        @media (max-width: 400px) {
+            .admin-stats-grid { grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 <body class="admin-mode">
@@ -53,17 +80,20 @@
                     <div style="font-size:12px; font-weight:600; color:var(--admin-accent); margin-bottom:4px;">ADMIN &bull; OVERVIEW</div>
                     <h1 class="page-title">System Status</h1>
                 </div>
-                <div style="display:flex; gap:10px;">
-                    <button onclick="seedTemplates()" class="btn btn-secondary btn-sm" id="seedBtn" title="Insert 5 global starter templates visible to all users">
+                <div class="admin-header-actions">
+                    <button onclick="syncTemplates()" class="btn btn-primary btn-sm" id="syncBtn" title="Update all global templates from latest code (upsert by name)">
+                        🔄 Sync Templates
+                    </button>
+                    <button onclick="seedTemplates()" class="btn btn-secondary btn-sm" id="seedBtn" title="Insert global templates if none exist">
                         🎨 Seed Templates
                     </button>
                     <button onclick="deleteGlobalTemplates()" class="btn btn-ghost btn-sm" title="Remove all global templates">
-                        🗑 Clear Global Templates
+                        🗑 Clear
                     </button>
                 </div>
             </header>
 
-            <div class="stats-grid" id="statsGrid" style="grid-template-columns: repeat(6, 1fr);">
+            <div class="admin-stats-grid" id="statsGrid">
                 <div class="stat-card"><div class="lbl">Total Users</div><div class="val" id="statUsers">...</div></div>
                 <div class="stat-card"><div class="lbl">Active Users</div><div class="val" id="statActive">...</div></div>
                 <div class="stat-card"><div class="lbl">Emails Today</div><div class="val" id="statEmails">...</div></div>
@@ -72,7 +102,7 @@
                 <div class="stat-card"><div class="lbl">New This Week</div><div class="val" id="statReplies">...</div></div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+            <div class="admin-content-grid">
                 <div class="card">
                     <h3 style="margin-bottom: 16px;">Emails Per Hour (Last 24h)</h3>
                     <div class="admin-chart-container" id="hourlyChart">
@@ -108,6 +138,7 @@
     </div>
 
     <script src="/js/api.js"></script>
+    <script src="/js/sidebar.js"></script>
     <script>
         requireAdmin();
         
@@ -165,6 +196,16 @@
             }
         }
         
+        async function syncTemplates() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true; btn.textContent = '⏳ Syncing…';
+            try {
+                const res = await api.post('/admin/seed-templates/sync', {});
+                alert(res.message);
+            } catch (e) { alert(e.message || 'Sync failed'); }
+            finally { btn.disabled = false; btn.textContent = '🔄 Sync Templates'; }
+        }
+
         async function seedTemplates() {
             const btn = document.getElementById('seedBtn');
             btn.disabled = true; btn.textContent = '⏳ Seeding…';

@@ -1,4 +1,4 @@
-const CACHE = 'bulkreach-v5';
+const CACHE = 'bulkreach-v6';
 const STATIC = [
   '/css/main.css', '/css/components.css', '/css/dashboard.css',
   '/js/api.js', '/js/sidebar.js', '/js/auth.js',
