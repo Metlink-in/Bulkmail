@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>About - BulkReach Pro</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .about-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+            border-radius: var(--radius-xl);
+            padding: 48px 40px;
+            color: #fff;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+        .about-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .about-hero-logo {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .about-hero h1 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .about-hero p {
+            font-size: 16px;
+            opacity: 0.88;
+            max-width: 540px;
+            line-height: 1.6;
+            position: relative;
+        }
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        @media (max-width: 700px) { .about-grid { grid-template-columns: 1fr; } }
+
+        .about-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+        }
+        .about-card-icon {
+            font-size: 32px;
+            margin-bottom: 14px;
+        }
+        .about-card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        .about-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .feature-list li span:first-child {
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .label { color: var(--text-secondary); font-weight: 500; }
+        .info-row .value { color: var(--text-primary); font-weight: 600; }
+
+        .tech-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin: 4px;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-logo">BulkReach Pro</div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html" class="sidebar-nav-item">Dashboard</a>
+            <a href="/pages/bulk-mail.html" class="sidebar-nav-item">Bulk Mail</a>
+            <a href="/pages/history.html" class="sidebar-nav-item">History</a>
+            <a href="/pages/templates.html" class="sidebar-nav-item">Templates</a>
+            <a href="/pages/contacts.html" class="sidebar-nav-item">Contacts</a>
+            <a href="/pages/schedule.html" class="sidebar-nav-item">Schedules</a>
+            <a href="/pages/replies.html" class="sidebar-nav-item">Replies</a>
+            <a href="/pages/settings.html" class="sidebar-nav-item">Settings</a>
+            <a href="/pages/profile.html" class="sidebar-nav-item">Profile</a>
+            <a href="/pages/about.html" class="sidebar-nav-item active" data-about-link="1">ℹ About</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <h1 class="page-title">About BulkReach Pro</h1>
+                <p style="color:var(--text-secondary);font-size:13px;margin-top:2px;">
+                    Platform information, features and build details.
+                </p>
+            </div>
+        </header>
+
+        <!-- Hero -->
+        <div class="about-hero">
+            <div class="about-hero-logo">✉️</div>
+            <div class="version-badge">
+                <span>●</span> Version 2.0 · Production
+            </div>
+            <h1>BulkReach Pro</h1>
+            <p>
+                A professional bulk email platform built for sales teams, marketers, and outreach specialists.
+                Send personalized campaigns at scale — without landing in spam.
+            </p>
+        </div>
+
+        <!-- App Info + Features -->
+        <div class="about-grid">
+
+            <!-- App Details -->
+            <div class="about-card">
+                <div class="about-card-icon">📋</div>
+                <h3>Platform Details</h3>
+                <div class="info-row">
+                    <span class="label">Application</span>
+                    <span class="value">BulkReach Pro</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Version</span>
+                    <span class="value">2.0.0</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Environment</span>
+                    <span class="value">Production</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Email Engine</span>
+                    <span class="value">SMTP (Serverless Tick)</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Data Storage</span>
+                    <span class="value">MongoDB Atlas</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">AI Engine</span>
+                    <span class="value">Google Gemini 1.5 Flash</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">PWA Support</span>
+                    <span class="value">✅ Installable</span>
+                </div>
+            </div>
+
+            <!-- Key Features -->
+            <div class="about-card">
+                <div class="about-card-icon">🚀</div>
+                <h3>Key Features</h3>
+                <ul class="feature-list">
+                    <li><span>📧</span> <span>Bulk email campaigns with SMTP throttling & daily limits</span></li>
+                    <li><span>🎯</span> <span>Custom Outreach — CSV import with merge tag personalization</span></li>
+                    <li><span>📑</span> <span>Rich HTML template library with 9+ professional designs</span></li>
+                    <li><span>🤖</span> <span>AI email composition powered by Google Gemini</span></li>
+                    <li><span>📊</span> <span>Contact management with CSV/Google Sheets import</span></li>
+                    <li><span>🔁</span> <span>Recurring schedules (daily, weekly, once)</span></li>
+                    <li><span>📨</span> <span>Reply tracking via IMAP (unread badge)</span></li>
+                    <li><span>📈</span> <span>Full campaign history and per-email status logs</span></li>
+                    <li><span>🔐</span> <span>Encrypted credential storage, per-user SMTP profiles</span></li>
+                    <li><span>🌍</span> <span>Timezone-aware scheduling (configurable per user)</span></li>
+                </ul>
+            </div>
+
+            <!-- Merge Tags Reference -->
+            <div class="about-card">
+                <div class="about-card-icon">🔖</div>
+                <h3>Merge Tags</h3>
+                <p style="margin-bottom:14px;">Use these tags in your subject and body — they auto-fill per recipient.</p>
+                <div>
+                    <span class="tech-pill">{first_name}</span>
+                    <span class="tech-pill">{last_name}</span>
+                    <span class="tech-pill">{full_name}</span>
+                    <span class="tech-pill">{company}</span>
+                    <span class="tech-pill">{org}</span>
+                    <span class="tech-pill">{email}</span>
+                    <span class="tech-pill">{custom_1}</span>
+                    <span class="tech-pill">{custom_2}</span>
+                    <span class="tech-pill">{custom_3}</span>
+                </div>
+            </div>
+
+            <!-- Tech Stack -->
+            <div class="about-card">
+                <div class="about-card-icon">⚙️</div>
+                <h3>Technology Stack</h3>
+                <p style="margin-bottom:14px;">Built with modern, production-grade technologies.</p>
+                <div>
+                    <span class="tech-pill">⚡ FastAPI</span>
+                    <span class="tech-pill">🍃 MongoDB Atlas</span>
+                    <span class="tech-pill">🐍 Python 3.11</span>
+                    <span class="tech-pill">📮 aiosmtplib</span>
+                    <span class="tech-pill">🔒 bcrypt</span>
+                    <span class="tech-pill">🔑 JWT Auth</span>
+                    <span class="tech-pill">📡 Vercel</span>
+                    <span class="tech-pill">🤖 Gemini AI</span>
+                    <span class="tech-pill">📊 gspread</span>
+                    <span class="tech-pill">🌐 PWA</span>
+                    <span class="tech-pill">🔔 Web Push</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sending Tips -->
+        <div class="card" style="margin-bottom:24px;">
+            <h3 style="margin-bottom:16px;">📬 Sending Best Practices</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+                <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;">
+                    <div style="font-size:20px;margin-bottom:8px;">⏱</div>
+                    <strong style="font-size:13px;">Use Delays</strong>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">180–600 s between emails avoids spam filters and protects sender reputation.</p>
+                </div>
+                <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;">
+                    <div style="font-size:20px;margin-bottom:8px;">📊</div>
+                    <strong style="font-size:13px;">Respect Daily Limits</strong>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Gmail: ~500/day. G Suite: ~2000/day. SendGrid/custom SMTP: as configured.</p>
+                </div>
+                <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;">
+                    <div style="font-size:20px;margin-bottom:8px;">🎨</div>
+                    <strong style="font-size:13px;">Personalise</strong>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Emails using {first_name} and {company} tags get 26% higher open rates.</p>
+                </div>
+                <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;">
+                    <div style="font-size:20px;margin-bottom:8px;">🔥</div>
+                    <strong style="font-size:13px;">Warm Up First</strong>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">New accounts: start with 20–50 emails/day and increase gradually over 2 weeks.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer note -->
+        <div style="text-align:center;padding:20px 0 40px;color:var(--text-muted);font-size:12px;">
+            BulkReach Pro · Built with ❤️ for professional email outreach ·
+            <a href="/pages/guide.html" style="color:var(--primary);">View User Guide</a>
+        </div>
+
+    </main>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>requireAuth();</script>
+</body>
+</html>

@@ -198,6 +198,46 @@
                         </div>
                     </div>
                     <div class="input-group">
+                        <label class="input-label">Timezone</label>
+                        <select id="timezone" class="input">
+                            <optgroup label="India">
+                                <option value="Asia/Kolkata">India Standard Time (IST) — UTC+5:30</option>
+                            </optgroup>
+                            <optgroup label="Middle East &amp; Asia">
+                                <option value="Asia/Dubai">Gulf Standard Time (GST) — UTC+4</option>
+                                <option value="Asia/Karachi">Pakistan Standard Time (PKT) — UTC+5</option>
+                                <option value="Asia/Dhaka">Bangladesh Standard Time (BST) — UTC+6</option>
+                                <option value="Asia/Colombo">Sri Lanka Standard Time — UTC+5:30</option>
+                                <option value="Asia/Kathmandu">Nepal Time (NPT) — UTC+5:45</option>
+                                <option value="Asia/Singapore">Singapore Time (SGT) — UTC+8</option>
+                                <option value="Asia/Kuala_Lumpur">Malaysia Time (MYT) — UTC+8</option>
+                                <option value="Asia/Bangkok">Indochina Time (ICT) — UTC+7</option>
+                                <option value="Asia/Tokyo">Japan Standard Time (JST) — UTC+9</option>
+                                <option value="Asia/Shanghai">China Standard Time (CST) — UTC+8</option>
+                                <option value="Asia/Seoul">Korea Standard Time (KST) — UTC+9</option>
+                            </optgroup>
+                            <optgroup label="Europe">
+                                <option value="UTC">UTC — UTC+0</option>
+                                <option value="Europe/London">GMT/BST (London) — UTC+0/+1</option>
+                                <option value="Europe/Paris">Central European Time (CET) — UTC+1/+2</option>
+                                <option value="Europe/Moscow">Moscow Time (MSK) — UTC+3</option>
+                            </optgroup>
+                            <optgroup label="Americas">
+                                <option value="America/New_York">Eastern Time (ET) — UTC-5/-4</option>
+                                <option value="America/Chicago">Central Time (CT) — UTC-6/-5</option>
+                                <option value="America/Denver">Mountain Time (MT) — UTC-7/-6</option>
+                                <option value="America/Los_Angeles">Pacific Time (PT) — UTC-8/-7</option>
+                                <option value="America/Sao_Paulo">Brazil Time (BRT) — UTC-3</option>
+                            </optgroup>
+                            <optgroup label="Australia &amp; Pacific">
+                                <option value="Australia/Sydney">Australian Eastern Time (AEST) — UTC+10/+11</option>
+                                <option value="Australia/Perth">Australian Western Time (AWST) — UTC+8</option>
+                                <option value="Pacific/Auckland">New Zealand Time (NZST) — UTC+12/+13</option>
+                            </optgroup>
+                        </select>
+                        <p class="input-hint">Used for scheduling — all times are shown and entered in this timezone.</p>
+                    </div>
+                    <div class="input-group">
                         <label class="input-label">Default Unsubscribe Footer (HTML)</label>
                         <textarea id="unsubscribe_footer" class="input" rows="4"
                             placeholder="<p style='font-size:11px;color:#999;'>Click <a href='{{unsubscribe_link}}'>here</a> to unsubscribe.</p>"></textarea>
@@ -495,6 +535,9 @@ async function loadSettings() {
         const texts = ['unsubscribe_footer', 'default_sheet_id'];
         nums.forEach(f => { const el = document.getElementById(f); if (el && s[f] != null) el.value = s[f]; });
         texts.forEach(f => { const el = document.getElementById(f); if (el && s[f]) el.value = s[f]; });
+        // Timezone
+        const tzEl = document.getElementById('timezone');
+        if (tzEl && s.timezone) tzEl.value = s.timezone;
         // Show masked placeholder if keys are saved
         if (s.gemini_api_key) document.getElementById('gemini_api_key').placeholder = '•••• saved — enter new key to replace';
         if (s.google_sheets_api_key) document.getElementById('google_sheets_api_key').placeholder = '•••• saved — enter new key to replace';
@@ -712,13 +755,15 @@ async function saveSafety() {
     const delay = parseInt(document.getElementById('email_delay_seconds').value) || 300;
     const limit = parseInt(document.getElementById('daily_send_limit').value) || 500;
     const footer = document.getElementById('unsubscribe_footer').value;
+    const tz    = document.getElementById('timezone').value || 'Asia/Kolkata';
 
     setBtnLoading('saveSafetyBtn', true);
     try {
         await api.post('/settings', {
             email_delay_seconds: Math.max(60, delay),
             daily_send_limit: limit,
-            unsubscribe_footer: footer
+            unsubscribe_footer: footer,
+            timezone: tz
         });
         showResult('safety_save_res', 'Safety settings saved!', 'success');
         showToast('Safety settings saved!');

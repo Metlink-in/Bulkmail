@@ -119,10 +119,6 @@
   .dashboard-grid { grid-template-columns: 1fr; }
 }
 
-.mobile-menu-btn {
-  display: none;
-}
-
 @media (max-width: 1024px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }

@@ -24,6 +24,8 @@
 
   /* ── Mobile sidebar toggle ─────────────────────────────────────── */
   function initMobileMenu() {
+    if (document.body.dataset.mobileMenuInited) return;
+    document.body.dataset.mobileMenuInited = '1';
     const sidebar  = document.querySelector('.sidebar');
     if (!sidebar) return;
 
@@ -149,8 +151,21 @@
         guideLink.href = '/pages/guide.html';
         guideLink.className = 'sidebar-nav-item' + (window.location.pathname.includes('guide') ? ' active' : '');
         guideLink.setAttribute('data-guide-link', '1');
-        guideLink.textContent = '? User Guide';
+        guideLink.textContent = '📖 User Guide';
         settingsLink.parentNode.insertBefore(guideLink, settingsLink);
+      }
+    }
+
+    // About link — inject after Profile if not already present
+    if (nav && !nav.querySelector('[data-about-link]')) {
+      const profileLink = [...nav.querySelectorAll('a')].find(a => a.href.includes('profile'));
+      if (profileLink) {
+        const aboutLink = document.createElement('a');
+        aboutLink.href = '/pages/about.html';
+        aboutLink.className = 'sidebar-nav-item' + (window.location.pathname.includes('about') ? ' active' : '');
+        aboutLink.setAttribute('data-about-link', '1');
+        aboutLink.textContent = 'ℹ About';
+        profileLink.parentNode.insertBefore(aboutLink, profileLink.nextSibling);
       }
     }
 

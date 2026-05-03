@@ -102,7 +102,10 @@
                 </div>
                 <div id="timingOpts">
                     <div class="input-group">
-                        <label class="input-label">Run At / Time</label>
+                        <label class="input-label" style="display:flex;justify-content:space-between;align-items:center;">
+                            Run At / Time
+                            <span id="tzLabel" style="font-size:11px;font-weight:400;color:var(--text-muted);background:var(--bg-secondary);padding:2px 8px;border-radius:20px;"></span>
+                        </label>
                         <input type="datetime-local" id="sTime" class="input" onkeydown="if(event.key==='Enter') saveSchedule()">
                     </div>
                 </div>
@@ -122,6 +125,7 @@
         requireAuth();
 
         let currentDate = new Date();
+        let userTimezone = 'Asia/Kolkata'; // default; overridden from settings
 
         function showToast(msg, type="success") {
             const container = document.getElementById('toastContainer');
@@ -132,16 +136,52 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        /* ── TZ helpers ──────────────────────────────── */
+        function formatInTz(isoStr, tz) {
+            if (!isoStr) return '—';
+            try {
+                return new Date(isoStr).toLocaleString('en-IN', {
+                    timeZone: tz,
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                });
+            } catch (_) { return new Date(isoStr).toLocaleString(); }
+        }
+
+        // Convert "YYYY-MM-DDTHH:mm" typed by user (meaning: in userTimezone) → UTC ISO string
+        function naiveToUtcInTz(localStr, tz) {
+            if (!localStr) return null;
+            const probe = new Date(localStr + ':00Z'); // treat as UTC temporarily
+            const tzStr = probe.toLocaleString('sv', { timeZone: tz }).replace(' ', 'T');
+            const probeInTz = new Date(tzStr + 'Z');
+            return new Date(2 * probe.getTime() - probeInTz.getTime()).toISOString();
+        }
+
+        // Get short TZ abbreviation for display
+        function getTzAbbr(tz) {
+            try {
+                return new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'short' })
+                    .formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value || tz;
+            } catch (_) { return tz; }
+        }
+
         function openScheduleModal() { document.getElementById('scheduleModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('scheduleModal').style.display = 'none'; }
 
         async function loadData() {
             try {
-                const [schedules, templates, lists] = await Promise.all([
+                const [schedules, templates, lists, userSettings] = await Promise.all([
                     api.get('/schedule'),
                     api.get('/template'),
-                    api.get('/contacts/lists')
+                    api.get('/contacts/lists'),
+                    api.get('/settings').catch(() => ({}))
                 ]);
+
+                // Apply user timezone
+                if (userSettings.timezone) userTimezone = userSettings.timezone;
+                const abbr = getTzAbbr(userTimezone);
+                const tzLbl = document.getElementById('tzLabel');
+                if (tzLbl) tzLbl.textContent = abbr;
 
                 renderSchedules(schedules);
                 renderCalendar(schedules);
@@ -174,7 +214,7 @@
                     <div>
                         <strong style="font-size:16px;">${s.name}</strong>
                         <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
-                            ${s.recurrence_type.toUpperCase()} • Next run: ${new Date(s.next_run).toLocaleString()}
+                            ${s.recurrence_type.toUpperCase()} • Next run: ${formatInTz(s.next_run, userTimezone)}
                         </div>
                     </div>
                     <div style="display:flex; gap:12px; align-items:center;">
@@ -221,12 +261,13 @@
         }
 
         async function saveSchedule() {
+            const rawTime = document.getElementById('sTime').value;
             const payload = {
                 name: document.getElementById('sName').value,
                 template_id: document.getElementById('sTemplate').value,
                 contact_list_id: document.getElementById('sList').value,
                 recurrence_type: document.querySelector('input[name="freq"]:checked').value,
-                run_at: document.getElementById('sTime').value ? new Date(document.getElementById('sTime').value).toISOString() : null
+                run_at: rawTime ? naiveToUtcInTz(rawTime, userTimezone) : null
             };
             
             try {

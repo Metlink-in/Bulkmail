@@ -35,6 +35,7 @@ class SettingsBody(BaseModel):
     unsubscribe_footer: Optional[str] = None
     google_sheets_api_key: Optional[str] = None
     default_sheet_id: Optional[str] = None
+    timezone: Optional[str] = "Asia/Kolkata"
 
 class SheetsTestBody(BaseModel):
     api_key: str
