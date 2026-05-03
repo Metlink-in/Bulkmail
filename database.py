@@ -65,6 +65,7 @@ async def get_db() -> AsyncIOMotorDatabase:
         try:
             await init_db(db)
             await seed_admin(db)
+            await sync_templates(db)
         except Exception as e:
             _db_initialized = False
             print(f"DB lazy-init failed: {e}")
@@ -134,3 +135,37 @@ async def seed_admin(db: AsyncIOMotorDatabase):
             }}
         )
         print(f"Admin user ({admin_email}) password synced from environment.")
+
+
+async def sync_templates(db: AsyncIOMotorDatabase):
+    """Upsert global starter templates on every cold start — idempotent."""
+    try:
+        from templates_data import GLOBAL_TEMPLATES
+        import uuid
+        now = datetime.now(timezone.utc)
+        inserted = 0
+        for t in GLOBAL_TEMPLATES:
+            existing = await db.mail_templates.find_one({"name": t["name"], "is_global": True})
+            if existing:
+                await db.mail_templates.update_one(
+                    {"_id": existing["_id"]},
+                    {"$set": {"subject": t["subject"], "html_body": t["html_body"].strip(), "updated_at": now}}
+                )
+            else:
+                await db.mail_templates.insert_one({
+                    "_id": str(uuid.uuid4()),
+                    "is_global": True,
+                    "user_id": "global",
+                    "name": t["name"],
+                    "subject": t["subject"],
+                    "html_body": t["html_body"].strip(),
+                    "created_at": now,
+                    "updated_at": now,
+                })
+                inserted += 1
+        if inserted:
+            print(f"Templates synced: {inserted} new template(s) added.")
+        else:
+            print("Templates synced: all up to date.")
+    except Exception as e:
+        print(f"Template sync warning: {e}")
