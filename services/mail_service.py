@@ -103,14 +103,19 @@ async def build_email_message(
     if reply_to:
         msg['Reply-To'] = reply_to
         
+    from email.utils import formatdate
+    msg['Date'] = formatdate(localtime=False)
+    msg['MIME-Version'] = "1.0"
     msg['Message-ID'] = f"<{uuid.uuid4()}@{message_id_domain}>"
-    msg['X-Mailer'] = "BulkReach Pro Engine/1.0"
-    msg['Precedence'] = "bulk"
-    msg['List-Unsubscribe'] = f"<mailto:unsubscribe@{message_id_domain}>"
     
-    # Text part
+    # Plain-text part — clean whitespace after stripping tags
     import re
-    text_body = re.sub('<[^<]+?>', '', s_body)
+    text_body = re.sub(r'<style[^>]*>[\s\S]*?</style>', '', s_body, flags=re.IGNORECASE)
+    text_body = re.sub(r'<br\s*/?>', '\n', text_body, flags=re.IGNORECASE)
+    text_body = re.sub(r'<p[^>]*>', '\n', text_body, flags=re.IGNORECASE)
+    text_body = re.sub(r'<[^<]+?>', '', text_body)
+    text_body = re.sub(r'[ \t]+', ' ', text_body)
+    text_body = re.sub(r'\n{3,}', '\n\n', text_body).strip()
     alt_part.attach(MIMEText(text_body, 'plain'))
     alt_part.attach(MIMEText(s_body, 'html'))
     
