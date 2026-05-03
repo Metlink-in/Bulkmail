@@ -461,6 +461,35 @@ async def seed_global_templates(current_admin: Dict[str, Any] = Depends(require_
     return {"message": f"Seeded {len(docs)} global templates successfully.", "count": len(docs)}
 
 
+@router.post("/seed-templates/sync")
+async def sync_global_templates(current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
+    """Upsert templates from templates_data — inserts new ones, updates existing by name."""
+    from templates_data import GLOBAL_TEMPLATES
+    now = get_current_timestamp()
+    inserted = updated = 0
+    for t in GLOBAL_TEMPLATES:
+        existing = await db.mail_templates.find_one({"name": t["name"], "is_global": True})
+        if existing:
+            await db.mail_templates.update_one(
+                {"_id": existing["_id"]},
+                {"$set": {"subject": t["subject"], "html_body": t["html_body"].strip(), "updated_at": now}}
+            )
+            updated += 1
+        else:
+            await db.mail_templates.insert_one({
+                "_id": str(uuid.uuid4()),
+                "is_global": True,
+                "user_id": "global",
+                "name": t["name"],
+                "subject": t["subject"],
+                "html_body": t["html_body"].strip(),
+                "created_at": now,
+                "updated_at": now,
+            })
+            inserted += 1
+    return {"message": f"Sync complete — {inserted} inserted, {updated} updated.", "inserted": inserted, "updated": updated}
+
+
 @router.delete("/seed-templates")
 async def delete_global_templates(current_admin: Dict[str, Any] = Depends(require_admin), db = Depends(get_db)):
     res = await db.mail_templates.delete_many({"is_global": True})
