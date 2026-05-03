@@ -122,8 +122,8 @@ async def build_email_message(
     text_body = re.sub(r'<[^<]+?>', '', text_body)
     text_body = re.sub(r'[ \t]+', ' ', text_body)
     text_body = re.sub(r'\n{3,}', '\n\n', text_body).strip()
-    alt_part.attach(MIMEText(text_body, 'plain'))
-    alt_part.attach(MIMEText(s_body, 'html'))
+    alt_part.attach(MIMEText(text_body, 'plain', 'utf-8'))
+    alt_part.attach(MIMEText(s_body, 'html', 'utf-8'))
     
     if has_attachments:
         msg.attach(alt_part)
