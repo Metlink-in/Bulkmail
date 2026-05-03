@@ -16,6 +16,19 @@ from services.validation_service import validate_email
 
 MIN_DELAY_SECONDS = 60
 DEFAULT_DELAY_SECONDS = 300
+
+# Values that look like unfilled placeholders — treat as empty
+_PLACEHOLDER_VALUES = {
+    "user", "users", "test", "name", "firstname", "first", "last", "lastname",
+    "org", "company", "organisation", "organization", "email", "admin",
+    "hello", "example", "sample", "demo", "unknown", "none", "null", "na", "n/a",
+}
+
+def _clean(val: str, fallback: str = "") -> str:
+    """Return val unless it looks like a generic placeholder."""
+    v = (val or "").strip()
+    return fallback if v.lower() in _PLACEHOLDER_VALUES else v
+
 SPAM_WORDS = [
     "free", "winner", "urgent", "click here", "act now", "limited time",
     "guaranteed", "no risk", "earn money", "make money", "cash", "prize",
@@ -473,8 +486,8 @@ async def tick_mail_job(db, user_id: str, job_id: str) -> dict:
 
     from_email = smtp_settings.get("smtp_user", "")
     domain = from_email.split("@")[-1] if "@" in from_email else "bulkreach.local"
-    _contact_name = next_contact.get("name") or next_contact["email"].split("@")[0]
-    _contact_org  = next_contact.get("org") or ""
+    _contact_name = _clean(next_contact.get("name", "")) or next_contact["email"].split("@")[0]
+    _contact_org  = _clean(next_contact.get("org", ""))
     personalization_data = {
         **next_contact.get("custom_fields", {}),
         "first_name": _contact_name,
@@ -601,9 +614,9 @@ async def tick_outreach_job(db, user_id: str, job_id: str) -> dict:
     from_email    = smtp_settings.get("smtp_user", "")
     domain        = from_email.split("@")[-1] if "@" in from_email else "bulkreach.local"
 
-    first_name = next_r.get("first_name", "") or next_r["email"].split("@")[0]
-    last_name  = next_r.get("last_name", "")
-    company    = next_r.get("company", "")
+    first_name = _clean(next_r.get("first_name", "")) or next_r["email"].split("@")[0]
+    last_name  = _clean(next_r.get("last_name", ""))
+    company    = _clean(next_r.get("company", ""))
     full_name  = f"{first_name} {last_name}".strip()
 
     personalization_data = {

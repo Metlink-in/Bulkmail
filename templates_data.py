@@ -2,6 +2,11 @@
 Global starter email templates.
 All CSS is inline for Gmail / Outlook / Apple Mail compatibility.
 Merge tags: {first_name}  {org}  {email}
+
+Gmail strips linear-gradient — every coloured <td> now carries:
+  bgcolor="#HEX"              (HTML4 attribute, always respected)
+  background-color:#HEX;     (CSS fallback before the gradient)
+  background:linear-gradient(...);  (for modern clients)
 """
 
 GLOBAL_TEMPLATES = [
@@ -18,7 +23,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#4A00E0 0%,#8E2DE2 100%);padding:36px 40px;text-align:center;">
+    <td bgcolor="#4A00E0" style="background-color:#4A00E0;background:linear-gradient(135deg,#4A00E0 0%,#8E2DE2 100%);padding:36px 40px;text-align:center;">
       <h1 style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Metlink</h1>
       <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.80);letter-spacing:0.5px;">Smart Solutions. Real Growth.</p>
     </td>
@@ -59,7 +64,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#4A00E0,#8E2DE2);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Book a Quick Call →</a>
+            <a href="#" style="display:inline-block;background-color:#4A00E0;background:linear-gradient(135deg,#4A00E0,#8E2DE2);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Book a Quick Call →</a>
           </td>
         </tr>
       </table>
@@ -96,7 +101,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);padding:40px;text-align:center;">
+    <td bgcolor="#1e3a8a" style="background-color:#1e3a8a;background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);padding:40px;text-align:center;">
       <div style="font-size:42px;margin-bottom:12px;">🎯</div>
       <h1 style="margin:0;font-size:24px;font-weight:800;color:#fff;">Hi {first_name} — got a minute?</h1>
       <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.75);">A short note worth your time</p>
@@ -132,7 +137,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Book a Free 15-Min Call →</a>
+            <a href="#" style="display:inline-block;background-color:#1e3a8a;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Book a Free 15-Min Call →</a>
           </td>
         </tr>
       </table>
@@ -169,7 +174,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#c2410c 0%,#ea580c 100%);padding:36px 40px;text-align:center;">
+    <td bgcolor="#c2410c" style="background-color:#c2410c;background:linear-gradient(135deg,#c2410c 0%,#ea580c 100%);padding:36px 40px;text-align:center;">
       <div style="font-size:40px;margin-bottom:12px;">👋</div>
       <h1 style="margin:0;font-size:24px;font-weight:800;color:#fff;">Just Checking In</h1>
       <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.80);">Still thinking it over? No pressure.</p>
@@ -208,7 +213,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#c2410c,#ea580c);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Pick a Time →</a>
+            <a href="#" style="display:inline-block;background-color:#c2410c;background:linear-gradient(135deg,#c2410c,#ea580c);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Pick a Time →</a>
           </td>
         </tr>
       </table>
@@ -245,7 +250,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#065f46 0%,#059669 100%);padding:40px;text-align:center;">
+    <td bgcolor="#065f46" style="background-color:#065f46;background:linear-gradient(135deg,#065f46 0%,#059669 100%);padding:40px;text-align:center;">
       <div style="font-size:42px;margin-bottom:12px;">🖥️</div>
       <h1 style="margin:0;font-size:24px;font-weight:800;color:#fff;">See It in Action</h1>
       <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.80);">A personalised demo built for {org}</p>
@@ -292,7 +297,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#065f46,#059669);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Book My Demo Slot →</a>
+            <a href="#" style="display:inline-block;background-color:#065f46;background:linear-gradient(135deg,#065f46,#059669);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Book My Demo Slot →</a>
           </td>
         </tr>
       </table>
@@ -329,7 +334,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:36px 40px;">
+    <td bgcolor="#0f172a" style="background-color:#0f172a;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:36px 40px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td>
@@ -407,7 +412,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Read All Updates →</a>
+            <a href="#" style="display:inline-block;background-color:#0f172a;background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Read All Updates →</a>
           </td>
         </tr>
       </table>
@@ -439,7 +444,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#9f1239 0%,#e11d48 100%);padding:40px;text-align:center;">
+    <td bgcolor="#9f1239" style="background-color:#9f1239;background:linear-gradient(135deg,#9f1239 0%,#e11d48 100%);padding:40px;text-align:center;">
       <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.70);letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">Free Live Workshop</p>
       <h1 style="margin:10px 0;font-size:26px;font-weight:800;color:#fff;line-height:1.3;">Grow Your Pipeline by 3× in 60 Days</h1>
       <table align="center" cellpadding="0" cellspacing="0" style="margin-top:16px;">
@@ -494,7 +499,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#9f1239,#e11d48);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Reserve My Free Seat →</a>
+            <a href="#" style="display:inline-block;background-color:#9f1239;background:linear-gradient(135deg,#9f1239,#e11d48);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Reserve My Free Seat →</a>
           </td>
         </tr>
       </table>
@@ -531,7 +536,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#b45309 0%,#d97706 100%);padding:40px;text-align:center;">
+    <td bgcolor="#b45309" style="background-color:#b45309;background:linear-gradient(135deg,#b45309 0%,#d97706 100%);padding:40px;text-align:center;">
       <div style="font-size:48px;margin-bottom:12px;">😢</div>
       <h1 style="margin:0;font-size:24px;font-weight:800;color:#fff;">We've Missed You, {first_name}</h1>
       <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.80);">It's been a while — let's reconnect</p>
@@ -564,7 +569,7 @@ GLOBAL_TEMPLATES = [
       <!-- OFFER -->
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
-          <td align="center" style="background:linear-gradient(135deg,#b45309,#d97706);border-radius:10px;padding:20px;">
+          <td bgcolor="#b45309" align="center" style="background-color:#b45309;background:linear-gradient(135deg,#b45309,#d97706);border-radius:10px;padding:20px;">
             <p style="margin:0 0 4px;font-size:13px;color:rgba(255,255,255,0.80);">Special offer for returning users</p>
             <p style="margin:0;font-size:22px;font-weight:800;color:#fff;">30% OFF — This Week Only</p>
           </td>
@@ -574,7 +579,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#b45309,#d97706);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Come Back &amp; Claim Offer →</a>
+            <a href="#" style="display:inline-block;background-color:#b45309;background:linear-gradient(135deg,#b45309,#d97706);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Come Back &amp; Claim Offer →</a>
           </td>
         </tr>
       </table>
@@ -611,7 +616,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#14532d 0%,#16a34a 100%);padding:40px;text-align:center;">
+    <td bgcolor="#14532d" style="background-color:#14532d;background:linear-gradient(135deg,#14532d 0%,#16a34a 100%);padding:40px;text-align:center;">
       <div style="font-size:48px;margin-bottom:12px;">🤝</div>
       <h1 style="margin:0;font-size:24px;font-weight:800;color:#fff;">Thanks for Your Time!</h1>
       <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.80);">It was great connecting with you</p>
@@ -660,7 +665,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Schedule Our Next Call →</a>
+            <a href="#" style="display:inline-block;background-color:#14532d;background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Schedule Our Next Call →</a>
           </td>
         </tr>
       </table>
@@ -697,7 +702,7 @@ GLOBAL_TEMPLATES = [
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#0c1445 0%,#1e3a8a 100%);padding:40px;">
+    <td bgcolor="#0c1445" style="background-color:#0c1445;background:linear-gradient(135deg,#0c1445 0%,#1e3a8a 100%);padding:40px;">
       <p style="margin:0;font-size:12px;color:#93c5fd;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">Prepared exclusively for</p>
       <h1 style="margin:8px 0;font-size:26px;font-weight:800;color:#fff;">{org}</h1>
       <p style="margin:0;font-size:14px;color:#93c5fd;">Growth Partnership Proposal · 2026</p>
@@ -749,9 +754,9 @@ GLOBAL_TEMPLATES = [
   <!-- INVESTMENT -->
   <tr>
     <td style="padding:0 40px 24px;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0c1445,#1e3a8a);border-radius:10px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td style="padding:24px;text-align:center;">
+          <td bgcolor="#0c1445" style="background-color:#0c1445;background:linear-gradient(135deg,#0c1445,#1e3a8a);border-radius:10px;padding:24px;text-align:center;">
             <p style="margin:0;font-size:12px;color:#93c5fd;text-transform:uppercase;letter-spacing:1px;">Investment</p>
             <p style="margin:8px 0;font-size:32px;font-weight:800;color:#fff;">₹49,999 <span style="font-size:16px;font-weight:400;color:#93c5fd;">/ month</span></p>
             <p style="margin:0;font-size:13px;color:#93c5fd;">No lock-in contract · Cancel anytime</p>
@@ -767,7 +772,7 @@ GLOBAL_TEMPLATES = [
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
         <tr>
           <td align="center">
-            <a href="#" style="display:inline-block;background:linear-gradient(135deg,#0c1445,#1e3a8a);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Accept Proposal →</a>
+            <a href="#" style="display:inline-block;background-color:#0c1445;background:linear-gradient(135deg,#0c1445,#1e3a8a);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">Accept Proposal →</a>
           </td>
         </tr>
       </table>
