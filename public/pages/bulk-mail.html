@@ -447,9 +447,19 @@
         function updatePreview() {
             document.getElementById('previewSubject').textContent = subjectInput.value || "No Subject";
 
-            const vars = { '{first_name}': 'John', '{name}': 'John', '{company}': 'Acme Corp', '{company_name}': 'Acme Corp', '{{industry}}': 'Tech', '{{your_name}}': 'Your Name' };
+            const previewVars = {
+                '{first_name}': 'John', '{{first_name}}': 'John',
+                '{name}': 'John', '{{name}}': 'John',
+                '{company}': 'Acme Corp', '{{company}}': 'Acme Corp',
+                '{company_name}': 'Acme Corp', '{{company_name}}': 'Acme Corp',
+                '{org}': 'Acme Corp', '{{org}}': 'Acme Corp',
+                '{{industry}}': 'Tech', '{{your_name}}': 'Your Name',
+                '{{your_role}}': 'CEO', '{{personalized_line}}': 'your recent work caught our eye',
+                '{{result_metric}}': '40% more replies', '{{cta_link}}': '#',
+                '{{unsubscribe_link}}': '#'
+            };
             function applyVars(s) {
-                for (const k in vars) s = s.replace(new RegExp(k.replace(/[{}]/g, '\\$&'), 'g'), vars[k]);
+                for (const k in previewVars) s = s.split(k).join(previewVars[k]);
                 return s;
             }
 
@@ -457,12 +467,16 @@
             let srcdoc;
 
             if (_fullTemplateHtml) {
-                // Reconstruct full HTML: original head/body styles + current editor body content
-                const bodyContent = applyVars(htmlBody.innerHTML || '');
-                const { bodyAttrs, headStyles } = _parseTemplate(_fullTemplateHtml);
-                srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">${headStyles}</head><body ${bodyAttrs}>${bodyContent}</body></html>`;
+                // Use the original full HTML as base — this preserves ALL head CSS,
+                // <body> attributes (background-color, font-family, etc.) exactly.
+                // Only the body inner content is replaced with the current editor state.
+                const editorBody = htmlBody.innerHTML || '';
+                srcdoc = _fullTemplateHtml.replace(
+                    /(<body[^>]*>)([\s\S]*?)(<\/body\s*>)/i,
+                    (_, openTag, _body, closeTag) => openTag + editorBody + closeTag
+                );
+                srcdoc = applyVars(srcdoc);
             } else {
-                // No template loaded — just wrap editor content in a basic shell
                 const bodyContent = applyVars(htmlBody.innerHTML || '<p>No content yet.</p>');
                 srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:24px 32px;line-height:1.6;color:#333;margin:0}</style></head><body>${bodyContent}</body></html>`;
             }
